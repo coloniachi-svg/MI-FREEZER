@@ -1,0 +1,6 @@
+{
+  "name": "Mi Freezer",
+  "description": "Aplicación web PWA profesional y optimizada para celular para gestionar el inventario de tu freezer con Google Sheets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

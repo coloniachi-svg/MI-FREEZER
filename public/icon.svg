@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="frostGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="50%" stop-color="#0ea5e9" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="iceInner" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#e0f2fe" stop-opacity="0.9" />
+    </linearGradient>
+    <filter id="frostGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0369a1" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded squircle with ice blue gradient -->
+  <rect width="512" height="512" rx="112" fill="url(#frostGrad)" />
+
+  <!-- Subtle frosty overlay ring -->
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#ffffff" stroke-width="4" stroke-opacity="0.25" />
+
+  <!-- Central Freezer / Snowflake Icon -->
+  <g transform="translate(100, 100)" filter="url(#frostGlow)">
+    <!-- Freezer outline with modern rounded corners -->
+    <rect x="36" y="20" width="240" height="272" rx="28" fill="url(#iceInner)" stroke="#0284c7" stroke-width="8" />
+    <!-- Top Freezer door split line -->
+    <line x1="36" y1="120" x2="276" y2="120" stroke="#0284c7" stroke-width="6" stroke-linecap="round"/>
+    <!-- Handles -->
+    <rect x="56" y="70" width="12" height="32" rx="6" fill="#0284c7" />
+    <rect x="56" y="145" width="12" height="48" rx="6" fill="#0284c7" />
+
+    <!-- Snowflake in center top door -->
+    <g transform="translate(180, 70) scale(0.65)" stroke="#0284c7" stroke-width="6" stroke-linecap="round">
+      <line x1="0" y1="-30" x2="0" y2="30" />
+      <line x1="-30" y1="0" x2="30" y2="0" />
+      <line x1="-21" y1="-21" x2="21" y2="21" />
+      <line x1="-21" y1="21" x2="21" y2="-21" />
+      <circle cx="0" cy="0" r="4" fill="#0284c7" />
+    </g>
+
+    <!-- Temperature indicator display on bottom door -->
+    <rect x="110" y="150" width="92" height="40" rx="10" fill="#0284c7" fill-opacity="0.12" stroke="#0284c7" stroke-width="3" />
+    <text x="156" y="177" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-weight="800" font-size="20" fill="#0369a1" text-anchor="middle">-18°C</text>
+
+    <!-- Frost crystals decorative dots -->
+    <circle cx="130" cy="230" r="5" fill="#38bdf8" />
+    <circle cx="156" cy="245" r="7" fill="#0284c7" />
+    <circle cx="182" cy="230" r="5" fill="#38bdf8" />
+  </g>
+</svg>

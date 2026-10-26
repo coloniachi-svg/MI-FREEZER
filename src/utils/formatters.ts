@@ -1,77 +1,149 @@
 /**
- * Formatting and parsing utilities for Spanish locale and freezer items
+ * Formatting and parsing utilities for German and Spanish locales
  */
 
-export function parseDecimalInput(value: string | number): number {
+import { LanguageCode } from '../types/freezer';
+import { translateUnitName } from '../i18n/translations';
+
+export function parseDecimalInput(value: string | number | undefined | null): number {
   if (typeof value === 'number') return isNaN(value) ? 0 : value;
   if (!value) return 0;
-  // Replace comma with period and strip invalid characters
+  // Replace comma with period and strip whitespace
   const sanitized = value.toString().trim().replace(',', '.');
   const parsed = parseFloat(sanitized);
   return isNaN(parsed) ? 0 : parsed;
 }
 
-export function formatCantidad(val: number | string | undefined | null): string {
+export function formatCantidad(
+  val: number | string | undefined | null,
+  lang: LanguageCode = 'de'
+): string {
   if (val === undefined || val === null || val === '') return '0';
   const num = typeof val === 'number' ? val : parseDecimalInput(val);
-  return num.toLocaleString('es-ES', {
+  const locale = lang === 'de' ? 'de-DE' : 'es-ES';
+  return num.toLocaleString(locale, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   });
 }
 
-export function formatUnidad(cantidad: number, unidad: string): string {
-  const formattedNum = formatCantidad(cantidad);
-  const u = (unidad || '').toLowerCase().trim();
-
-  if (u === 'unidad' || u === 'unidades' || u === 'u') {
-    return cantidad === 1 ? `${formattedNum} unidad` : `${formattedNum} unidades`;
-  }
-  if (u === 'litro' || u === 'litros' || u === 'l') {
-    return cantidad === 1 ? `${formattedNum} litro` : `${formattedNum} litros`;
-  }
-  if (u === 'kg' || u === 'kilo' || u === 'kilos') {
-    return `${formattedNum} kg`;
-  }
-  if (u === 'g' || u === 'gramo' || u === 'gramos') {
-    return `${formattedNum} g`;
-  }
-  return `${formattedNum} ${unidad}`;
+export function formatUnidad(
+  cantidad: number,
+  unidad: string,
+  lang: LanguageCode = 'de'
+): string {
+  const formattedNum = formatCantidad(cantidad, lang);
+  const u = translateUnitName(unidad, cantidad, lang);
+  return `${formattedNum} ${u}`;
 }
 
-export function getCategoryEmoji(category: string): string {
-  const cat = (category || '').toLowerCase();
-  if (cat.includes('carne') || cat.includes('pollo') || cat.includes('vaca') || cat.includes('cerdo') || cat.includes('pescado')) {
+export function getCategoryEmoji(category: string | any): string {
+  const cat = (typeof category === 'string' ? category : (category?.nombre || category?.Categoria || '')).toLowerCase();
+  if (
+    cat.includes('carne') ||
+    cat.includes('fleisch') ||
+    cat.includes('pollo') ||
+    cat.includes('hähnchen') ||
+    cat.includes('huhn') ||
+    cat.includes('rind') ||
+    cat.includes('schwein') ||
+    cat.includes('vaca') ||
+    cat.includes('cerdo') ||
+    cat.includes('pescado') ||
+    cat.includes('fisch')
+  ) {
     return '🥩';
   }
-  if (cat.includes('pan') || cat.includes('harina') || cat.includes('masa')) {
+  if (
+    cat.includes('pan') ||
+    cat.includes('backware') ||
+    cat.includes('brot') ||
+    cat.includes('harina') ||
+    cat.includes('masa') ||
+    cat.includes('brötchen')
+  ) {
     return '🥖';
   }
-  if (cat.includes('verdura') || cat.includes('vegetal') || cat.includes('hortaliza')) {
+  if (
+    cat.includes('verdura') ||
+    cat.includes('gemüse') ||
+    cat.includes('gemuse') ||
+    cat.includes('vegetal') ||
+    cat.includes('spinat') ||
+    cat.includes('hortaliza')
+  ) {
     return '🥦';
   }
-  if (cat.includes('fruta') || cat.includes('baya')) {
+  if (
+    cat.includes('fruta') ||
+    cat.includes('obst') ||
+    cat.includes('baya') ||
+    cat.includes('beeren') ||
+    cat.includes('erdbeere')
+  ) {
     return '🍓';
   }
-  if (cat.includes('comida') || cat.includes('preparad') || cat.includes('plato') || cat.includes('tupper') || cat.includes('guiso')) {
+  if (
+    cat.includes('comida') ||
+    cat.includes('fertiggericht') ||
+    cat.includes('gericht') ||
+    cat.includes('preparad') ||
+    cat.includes('plato') ||
+    cat.includes('tupper') ||
+    cat.includes('guiso') ||
+    cat.includes('eintopf')
+  ) {
     return '🍲';
   }
-  if (cat.includes('postre') || cat.includes('helado') || cat.includes('dulce')) {
+  if (
+    cat.includes('postre') ||
+    cat.includes('dessert') ||
+    cat.includes('helado') ||
+    cat.includes('eis') ||
+    cat.includes('dulce')
+  ) {
     return '🍨';
   }
-  if (cat.includes('marisco') || cat.includes('camar') || cat.includes('salmon')) {
+  if (
+    cat.includes('marisco') ||
+    cat.includes('meeresfrüchte') ||
+    cat.includes('camar') ||
+    cat.includes('garnelen') ||
+    cat.includes('salmon')
+  ) {
     return '🦐';
   }
-  if (cat.includes('salsa') || cat.includes('caldo')) {
+  if (
+    cat.includes('salsa') ||
+    cat.includes('soße') ||
+    cat.includes('sauce') ||
+    cat.includes('caldo') ||
+    cat.includes('brühe')
+  ) {
     return '🥣';
   }
-  if (cat.includes('lacteo') || cat.includes('queso') || cat.includes('manteca')) {
+  if (
+    cat.includes('lacteo') ||
+    cat.includes('milch') ||
+    cat.includes('queso') ||
+    cat.includes('käse') ||
+    cat.includes('butter')
+  ) {
     return '🧀';
   }
   return '❄️';
 }
 
-export function formatDateSpanish(dateStr: string | Date | undefined): string {
+/**
+ * Formats date based on locale:
+ * Deutsch: DD.MM.YYYY [HH:mm]
+ * Español: DD/MM/YYYY [HH:mm]
+ */
+export function formatDate(
+  dateStr: string | Date | undefined,
+  lang: LanguageCode = 'de',
+  includeTime = true
+): string {
   if (!dateStr) return '';
   try {
     const d = new Date(dateStr);
@@ -81,8 +153,19 @@ export function formatDateSpanish(dateStr: string | Date | undefined): string {
     const year = d.getFullYear();
     const hours = String(d.getHours()).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+
+    const sep = lang === 'de' ? '.' : '/';
+    const dateFormatted = `${day}${sep}${month}${sep}${year}`;
+
+    if (!includeTime) {
+      return dateFormatted;
+    }
+    return `${dateFormatted} ${hours}:${minutes}`;
   } catch {
     return String(dateStr);
   }
 }
+
+// Backward compatibility alias
+export const formatDateSpanish = (dateStr: string | Date | undefined) =>
+  formatDate(dateStr, 'es', true);

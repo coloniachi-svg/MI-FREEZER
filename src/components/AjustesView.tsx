@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import {
+  ShieldCheck,
+  Smartphone,
+  RefreshCw,
+  Globe,
   Lock,
-  KeyRound,
   Check,
   AlertCircle,
-  Smartphone,
-  ShieldCheck,
-  RefreshCw,
-  LogOut,
-  Info,
 } from 'lucide-react';
-import { clearStoredUserPin, getStoredUserPin, setStoredUserPin } from '../services/backend';
+import { getStoredUserPin, setStoredUserPin } from '../services/backend';
 import { PWAInstallButton } from './PWAInstallButton';
+import { useLanguage } from '../i18n/LanguageContext';
+import { LanguageCode } from '../types/freezer';
 
 interface AjustesViewProps {
   onRefreshAll: () => Promise<void>;
@@ -22,7 +22,7 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
   onRefreshAll,
   onLockApp,
 }) => {
-  const [currentPin, setCurrentPin] = useState(getStoredUserPin());
+  const { t, lang, setLang } = useLanguage();
   const [newPin, setNewPin] = useState('');
   const [msg, setMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,13 +31,12 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
     e.preventDefault();
     const clean = newPin.trim();
     if (!clean) {
-      setMsg({ text: 'Por favor escribe el nuevo PIN.', isError: true });
+      setMsg({ text: t.errorPinVacio, isError: true });
       return;
     }
     setStoredUserPin(clean, true);
-    setCurrentPin(clean);
     setNewPin('');
-    setMsg({ text: 'PIN actualizado correctamente en este dispositivo.', isError: false });
+    setMsg({ text: t.pinActualizadoExito, isError: false });
     setTimeout(() => setMsg(null), 3000);
   };
 
@@ -45,22 +44,24 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
     setRefreshing(true);
     try {
       await onRefreshAll();
-      setMsg({ text: 'Inventario sincronizado con éxito.', isError: false });
+      setMsg({ text: t.sincronizadoExito, isError: false });
       setTimeout(() => setMsg(null), 3000);
     } catch (err: any) {
-      setMsg({ text: err?.message || 'Error al sincronizar.', isError: true });
+      setMsg({ text: err?.message || 'Error', isError: true });
     } finally {
       setRefreshing(false);
     }
   };
 
+  const handleSelectLang = (l: LanguageCode) => {
+    setLang(l);
+  };
+
   return (
     <div className="space-y-4 pb-24">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">Ajustes y Seguridad</h2>
-        <p className="text-xs text-slate-500">
-          Configuración personal de Mi Freezer
-        </p>
+        <h2 className="text-lg font-bold text-slate-900">{t.ajustesTitulo}</h2>
+        <p className="text-xs text-slate-500">{t.ajustesSubtitulo}</p>
       </div>
 
       {msg && (
@@ -80,6 +81,53 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
         </div>
       )}
 
+      {/* Idioma / Sprache */}
+      <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3.5">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-sky-50 text-sky-600 border border-sky-100">
+            <Globe className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-slate-900 text-sm">{t.idiomaSeccionTitulo}</h4>
+            <p className="text-xs text-slate-500">{t.idiomaSeccionDesc}</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+          <button
+            type="button"
+            onClick={() => handleSelectLang('de')}
+            className={`p-3 rounded-xl border flex items-center justify-between text-left transition ${
+              lang === 'de'
+                ? 'bg-sky-50/80 border-sky-500 text-sky-800 font-bold shadow-xs'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🇩🇪</span>
+              <span className="text-xs">Deutsch</span>
+            </div>
+            {lang === 'de' && <Check className="w-4 h-4 text-sky-600" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelectLang('es')}
+            className={`p-3 rounded-xl border flex items-center justify-between text-left transition ${
+              lang === 'es'
+                ? 'bg-sky-50/80 border-sky-500 text-sky-800 font-bold shadow-xs'
+                : 'border-slate-200 text-slate-600 hover:border-slate-300'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🇪🇸</span>
+              <span className="text-xs">Español</span>
+            </div>
+            {lang === 'es' && <Check className="w-4 h-4 text-sky-600" />}
+          </button>
+        </div>
+      </div>
+
       {/* Seguridad de Acceso */}
       <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-3.5">
         <div className="flex items-center justify-between">
@@ -88,27 +136,25 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-slate-900 text-sm">PIN de Seguridad</h4>
-              <p className="text-xs text-slate-500">
-                Protege tu inventario contra accesos no deseados
-              </p>
+              <h4 className="font-bold text-slate-900 text-sm">{t.pinSeccionTitulo}</h4>
+              <p className="text-xs text-slate-500">{t.pinSeccionDesc}</p>
             </div>
           </div>
 
           <button
             onClick={onLockApp}
             className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition active:scale-95"
-            title="Bloquear sesión ahora"
+            title={t.bloquearBtn}
           >
             <Lock className="w-3.5 h-3.5" />
-            <span>Bloquear</span>
+            <span>{t.bloquearBtn}</span>
           </button>
         </div>
 
         <form onSubmit={handleUpdatePin} className="pt-2 border-t border-slate-100 space-y-3">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Cambiar PIN en este celular
+              {t.cambiarPinLabel}
             </label>
             <div className="flex gap-2">
               <input
@@ -118,7 +164,7 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
                 maxLength={10}
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value)}
-                placeholder="Nuevo PIN (ej. 1234)"
+                placeholder={t.nuevoPinPlaceholder}
                 className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition font-mono tracking-widest text-center"
               />
               <button
@@ -126,12 +172,13 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
                 disabled={!newPin.trim()}
                 className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition disabled:opacity-50"
               >
-                Guardar
+                {t.guardarPinBtn}
               </button>
             </div>
           </div>
           <p className="text-[11px] text-slate-400">
-            PIN configurado actual: <strong className="font-mono text-slate-600">••••</strong>
+            {t.pinActualLabel}{' '}
+            <strong className="font-mono text-slate-600">••••</strong>
           </p>
         </form>
       </div>
@@ -143,15 +190,13 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
             <Smartphone className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-slate-900 text-sm">Aplicación PWA</h4>
-            <p className="text-xs text-slate-500">
-              Instala la app en tu pantalla de inicio para acceso directo
-            </p>
+            <h4 className="font-bold text-slate-900 text-sm">{t.pwaSeccionTitulo}</h4>
+            <p className="text-xs text-slate-500">{t.pwaSeccionDesc}</p>
           </div>
         </div>
 
         <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <span className="text-xs text-slate-600">Disponibilidad en celular</span>
+          <span className="text-xs text-slate-600">{t.pwaDisponibilidadLabel}</span>
           <PWAInstallButton />
         </div>
       </div>
@@ -164,9 +209,11 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
               <RefreshCw className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-bold text-slate-900 text-sm">Sincronización</h4>
+              <h4 className="font-bold text-slate-900 text-sm">
+                {t.sincronizacionSeccionTitulo}
+              </h4>
               <p className="text-xs text-slate-500">
-                Mantener datos actualizados con tu planilla
+                {t.sincronizacionSeccionDesc}
               </p>
             </div>
           </div>
@@ -177,7 +224,7 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
             className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 font-semibold text-xs flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Sincronizar</span>
+            <span>{t.sincronizarBtn}</span>
           </button>
         </div>
       </div>

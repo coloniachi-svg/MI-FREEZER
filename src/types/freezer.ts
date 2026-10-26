@@ -6,6 +6,8 @@ export type UnidadMedida = 'kg' | 'g' | 'litro' | 'unidad';
 
 export type TipoMovimiento = 'ENTRADA' | 'SALIDA' | 'AJUSTE';
 
+export type LanguageCode = 'de' | 'es';
+
 export interface Producto {
   ID: string | number;
   Producto: string;
@@ -31,8 +33,11 @@ export interface Movimiento {
 }
 
 export interface Categoria {
-  ID: string | number;
-  Categoria: string;
+  id: string | number;
+  nombre: string;
+  // Aliases for compatibility
+  ID?: string | number;
+  Categoria?: string;
 }
 
 export interface Configuracion {
@@ -48,6 +53,7 @@ export interface BackendResponse<T = unknown> {
   productos?: Producto[];
   categorias?: Categoria[];
   movimientos?: Movimiento[];
+  configuracion?: Configuracion[] | Record<string, string>;
   producto?: Producto;
   data?: T;
   code?: string;

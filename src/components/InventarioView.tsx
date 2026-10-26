@@ -5,13 +5,11 @@ import {
   Minus,
   AlertTriangle,
   PackageX,
-  Filter,
-  PlusCircle,
   RefreshCw,
-  Sparkles,
 } from 'lucide-react';
 import { Categoria, Producto } from '../types/freezer';
-import { formatCantidad, formatUnidad, getCategoryEmoji } from '../utils/formatters';
+import { getCategoryEmoji } from '../utils/formatters';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface InventarioViewProps {
   productos: Producto[];
@@ -38,6 +36,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
   onRefresh,
   loading,
 }) => {
+  const { t, formatUnidadLocale, translateCategory } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [soloStockBajo, setSoloStockBajo] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,23 +50,28 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
     }
   };
 
-  // Filter products
+  // Filter products safely
   const filteredProductos = useMemo(() => {
     return productos.filter((p) => {
-      const matchSearch = (p.Producto || '')
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase().trim());
+      const pNombre = (p.Producto || '').toLowerCase();
+      const pCat = (p.Categoria || '').toLowerCase();
+      const s = searchTerm.toLowerCase().trim();
 
-      const matchCat =
-        !categoriaSeleccionada ||
-        p.Categoria.toLowerCase() === categoriaSeleccionada.toLowerCase();
+      const matchSearch = pNombre.includes(s) || pCat.includes(s);
+
+      let matchCat = true;
+      if (categoriaSeleccionada) {
+        const selLower = categoriaSeleccionada.toLowerCase().trim();
+        const catTranslated = translateCategory(p.Categoria).toLowerCase().trim();
+        matchCat = pCat === selLower || catTranslated === selLower;
+      }
 
       const isBajo = p.Saldo <= p.Minimo;
       const matchStockBajo = !soloStockBajo || isBajo;
 
       return matchSearch && matchCat && matchStockBajo;
     });
-  }, [productos, searchTerm, categoriaSeleccionada, soloStockBajo]);
+  }, [productos, searchTerm, categoriaSeleccionada, soloStockBajo, translateCategory]);
 
   const totalProductos = productos.length;
   const stockBajoCount = productos.filter((p) => p.Saldo <= p.Minimo).length;
@@ -79,7 +83,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
         <div className="p-3 rounded-2xl bg-white border border-sky-100 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              Total Alimentos
+              {t.totalAlimentos}
             </p>
             <p className="text-xl font-extrabold text-slate-900 mt-0.5">
               {totalProductos}
@@ -106,7 +110,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                 soloStockBajo ? 'text-amber-100' : 'text-amber-700'
               }`}
             >
-              Stock Bajo
+              {t.stockBajo}
             </p>
             <p
               className={`text-xl font-extrabold mt-0.5 ${
@@ -137,7 +141,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar pechuga, pan, carne..."
+              placeholder={t.buscarPlaceholder}
               className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
             />
             {searchTerm && (
@@ -154,7 +158,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
             onClick={handleRefresh}
             disabled={loading || refreshing}
             className="p-2.5 rounded-xl text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-100 transition active:scale-95 disabled:opacity-50 shrink-0"
-            title="Sincronizar con Google Sheets"
+            title={t.sincronizar}
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -166,8 +170,8 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95 shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            <span className="hidden sm:inline">Nuevo producto</span>
-            <span className="sm:hidden">Nuevo</span>
+            <span className="hidden sm:inline">{t.nuevoProducto}</span>
+            <span className="sm:hidden">{t.nuevoProductoShort}</span>
           </button>
         </div>
 
@@ -181,22 +185,29 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                 : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
             }`}
           >
-            Todos ({productos.length})
+            {t.todos} ({productos.length})
           </button>
 
           {categorias.map((cat) => {
+            const rawCatNombre = cat.nombre || '';
+            const visualNombre = translateCategory(rawCatNombre);
             const isSelected =
-              categoriaSeleccionada?.toLowerCase() ===
-              cat.Categoria.toLowerCase();
-            const count = productos.filter(
-              (p) => p.Categoria.toLowerCase() === cat.Categoria.toLowerCase()
-            ).length;
+              categoriaSeleccionada?.toLowerCase().trim() ===
+              rawCatNombre.toLowerCase().trim();
+
+            const count = productos.filter((p) => {
+              const pCat = (p.Categoria || '').toLowerCase().trim();
+              return (
+                pCat === rawCatNombre.toLowerCase().trim() ||
+                pCat === visualNombre.toLowerCase().trim()
+              );
+            }).length;
 
             return (
               <button
-                key={cat.ID || cat.Categoria}
+                key={cat.id || rawCatNombre}
                 onClick={() =>
-                  onSelectCategoria(isSelected ? null : cat.Categoria)
+                  onSelectCategoria(isSelected ? null : rawCatNombre)
                 }
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border flex items-center gap-1.5 ${
                   isSelected
@@ -204,8 +215,8 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <span>{getCategoryEmoji(cat.Categoria)}</span>
-                <span>{cat.Categoria}</span>
+                <span>{getCategoryEmoji(rawCatNombre)}</span>
+                <span>{visualNombre}</span>
                 <span className="opacity-75 text-[10px]">({count})</span>
               </button>
             );
@@ -222,27 +233,27 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                 ❄️
               </div>
               <h3 className="font-bold text-slate-900 text-base">
-                Tu freezer está vacío. Agrega tu primer producto.
+                {t.emptyFreezerTitle}
               </h3>
               <p className="text-xs text-slate-500">
-                Lleva el control exacto de tus alimentos congelados, carnes, panes y porciones.
+                {t.emptyFreezerDesc}
               </p>
               <button
                 onClick={onOpenNuevoModal}
                 className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>+ Nuevo producto</span>
+                <span>{t.nuevoProducto}</span>
               </button>
             </div>
           ) : (
             <div className="space-y-2">
               <PackageX className="w-10 h-10 text-slate-300 mx-auto" />
               <h4 className="font-semibold text-slate-700 text-sm">
-                No se encontraron alimentos
+                {t.emptySearchTitle}
               </h4>
               <p className="text-xs text-slate-400">
-                Ningún alimento coincide con los filtros aplicados.
+                {t.emptySearchDesc}
               </p>
               <button
                 onClick={() => {
@@ -252,7 +263,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                 }}
                 className="text-xs font-semibold text-sky-600 hover:underline pt-1"
               >
-                Limpiar filtros
+                {t.limpiarFiltros}
               </button>
             </div>
           )}
@@ -262,6 +273,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
           {filteredProductos.map((prod) => {
             const isAgotado = prod.Saldo <= 0;
             const isBajo = prod.Saldo <= prod.Minimo && !isAgotado;
+            const catVisual = translateCategory(prod.Categoria);
 
             return (
               <div
@@ -291,23 +303,23 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
 
                       {isAgotado && (
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-200">
-                          Agotado
+                          {t.agotado}
                         </span>
                       )}
 
                       {isBajo && (
                         <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 border border-amber-200">
-                          Bajo stock
+                          {t.bajoStockBadge}
                         </span>
                       )}
                     </div>
 
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-base font-extrabold text-slate-800 font-mono">
-                        {formatUnidad(prod.Saldo, prod.Unidad)}
+                        {formatUnidadLocale(prod.Saldo, prod.Unidad)}
                       </span>
                       <span className="text-[11px] text-slate-400">
-                        • {prod.Categoria}
+                        • {catVisual}
                       </span>
                     </div>
                   </div>
@@ -322,8 +334,8 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                     }}
                     disabled={prod.Saldo <= 0}
                     className="w-11 h-11 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 active:scale-95 text-amber-700 border border-amber-200 flex items-center justify-center font-bold transition disabled:opacity-30 disabled:pointer-events-none shadow-xs"
-                    aria-label={`Retirar ${prod.Producto}`}
-                    title="Retirar cantidad"
+                    aria-label={`${t.retirarProducto} ${prod.Producto}`}
+                    title={t.retirarProducto}
                   >
                     <Minus className="w-5 h-5 stroke-[2.8]" />
                   </button>
@@ -334,8 +346,8 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                       onOpenAgregarModal(prod);
                     }}
                     className="w-11 h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 active:scale-95 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold transition shadow-xs"
-                    aria-label={`Agregar ${prod.Producto}`}
-                    title="Agregar cantidad"
+                    aria-label={`${t.agregarProducto} ${prod.Producto}`}
+                    title={t.agregarProducto}
                   >
                     <Plus className="w-5 h-5 stroke-[2.8]" />
                   </button>

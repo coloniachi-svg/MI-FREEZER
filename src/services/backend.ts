@@ -1,7 +1,7 @@
 /**
  * Centralized backend service for communicating exclusively with /api/backend.
  * Handles single-user security authorization PIN, request formatting,
- * and error parsing.
+ * error parsing, and robust data normalization.
  */
 
 import {
@@ -17,7 +17,7 @@ import { parseDecimalInput } from '../utils/formatters';
 
 const BASE_API_URL = '/api/backend';
 
-// Storage key for user PIN on this client
+// Storage key for user PIN on this client (Note: Only used for PIN security, not language or inventory)
 const USER_PIN_STORAGE_KEY = 'mi_freezer_user_pin';
 
 /**
@@ -64,19 +64,25 @@ export function clearStoredUserPin(): void {
 }
 
 /**
- * Normalizes product numbers from Google Sheets (which might be strings)
+ * Normalizes product numbers and categories from Google Sheets
  */
 function normalizeProducto(item: any): Producto {
+  const catRaw = item?.Categoria ?? item?.categoria ?? item?.categoriaNombre ?? 'Otros';
+  const catName =
+    typeof catRaw === 'object'
+      ? catRaw?.nombre || catRaw?.Categoria || 'Otros'
+      : String(catRaw || 'Otros');
+
   return {
-    ID: item.ID || item.id || '',
-    Producto: item.Producto || item.producto || item.nombre || '',
-    Categoria: item.Categoria || item.categoria || 'Otros',
-    Unidad: item.Unidad || item.unidad || 'unidad',
-    Saldo: parseDecimalInput(item.Saldo ?? item.saldo ?? 0),
-    Minimo: parseDecimalInput(item.Minimo ?? item.minimo ?? 0),
-    Estado: item.Estado || item.estado || 'ACTIVO',
-    FechaCreacion: item.FechaCreacion || item.fechaCreacion || '',
-    FechaActualizacion: item.FechaActualizacion || item.fechaActualizacion || '',
+    ID: item?.ID || item?.id || '',
+    Producto: item?.Producto || item?.producto || item?.nombre || '',
+    Categoria: catName,
+    Unidad: item?.Unidad || item?.unidad || 'unidad',
+    Saldo: parseDecimalInput(item?.Saldo ?? item?.saldo ?? 0),
+    Minimo: parseDecimalInput(item?.Minimo ?? item?.minimo ?? 0),
+    Estado: item?.Estado || item?.estado || 'ACTIVO',
+    FechaCreacion: item?.FechaCreacion || item?.fechaCreacion || '',
+    FechaActualizacion: item?.FechaActualizacion || item?.fechaActualizacion || '',
   };
 }
 
@@ -85,29 +91,74 @@ function normalizeProducto(item: any): Producto {
  */
 function normalizeMovimiento(item: any): Movimiento {
   return {
-    ID: item.ID || item.id || '',
-    Fecha: item.Fecha || item.fecha || '',
-    ProductoID: item.ProductoID || item.productoId || item.producto_id || '',
-    Producto: item.Producto || item.producto || '',
-    Tipo: (item.Tipo || item.tipo || 'ENTRADA').toUpperCase(),
-    Cantidad: parseDecimalInput(item.Cantidad ?? item.cantidad ?? 0),
-    SaldoAnterior: parseDecimalInput(item.SaldoAnterior ?? item.saldoAnterior ?? 0),
-    SaldoPosterior: parseDecimalInput(item.SaldoPosterior ?? item.saldoPosterior ?? 0),
-    Observacion: item.Observacion || item.observacion || '',
+    ID: item?.ID || item?.id || '',
+    Fecha: item?.Fecha || item?.fecha || '',
+    ProductoID: item?.ProductoID || item?.productoId || item?.producto_id || '',
+    Producto: item?.Producto || item?.producto || '',
+    Tipo: (item?.Tipo || item?.tipo || 'ENTRADA').toUpperCase(),
+    Cantidad: parseDecimalInput(item?.Cantidad ?? item?.cantidad ?? 0),
+    SaldoAnterior: parseDecimalInput(item?.SaldoAnterior ?? item?.saldoAnterior ?? 0),
+    SaldoPosterior: parseDecimalInput(item?.SaldoPosterior ?? item?.saldoPosterior ?? 0),
+    Observacion: item?.Observacion || item?.observacion || '',
   };
 }
 
 /**
- * Normalizes category records
+ * Normalizes category records, ensuring `nombre` is ALWAYS a clean string,
+ * preventing `[object Object]` errors completely.
  */
 function normalizeCategoria(item: any): Categoria {
   if (typeof item === 'string') {
-    return { ID: item, Categoria: item };
+    const s = item.trim();
+    return {
+      id: s,
+      nombre: s,
+      ID: s,
+      Categoria: s,
+    };
   }
+
+  const rawNombre =
+    item?.nombre ??
+    item?.Nombre ??
+    item?.Categoria ??
+    item?.categoria ??
+    item?.name ??
+    '';
+
+  const cleanNombre =
+    typeof rawNombre === 'object'
+      ? (rawNombre?.nombre || rawNombre?.Categoria || '')
+      : String(rawNombre || '').trim();
+
+  const rawId = item?.id ?? item?.ID ?? item?.Id ?? cleanNombre;
+  const cleanId = String(rawId || cleanNombre);
+
   return {
-    ID: item.ID || item.id || item.Categoria || item.categoria || '',
-    Categoria: item.Categoria || item.categoria || String(item),
+    id: cleanId,
+    nombre: cleanNombre,
+    ID: cleanId,
+    Categoria: cleanNombre,
   };
+}
+
+/**
+ * Normalizes configuration key-values from Google Sheets
+ */
+function normalizeConfiguracion(rawConfig: any): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (Array.isArray(rawConfig)) {
+    for (const item of rawConfig) {
+      const k = item?.Clave ?? item?.clave ?? item?.key ?? item?.Key;
+      const v = item?.Valor ?? item?.valor ?? item?.val ?? item?.Value;
+      if (k) map[String(k).trim().toLowerCase()] = String(v ?? '').trim();
+    }
+  } else if (rawConfig && typeof rawConfig === 'object') {
+    for (const [k, v] of Object.entries(rawConfig)) {
+      map[k.trim().toLowerCase()] = String(v ?? '').trim();
+    }
+  }
+  return map;
 }
 
 /**
@@ -119,7 +170,7 @@ async function requestApi<T>(
   body?: Record<string, unknown>
 ): Promise<BackendResponse<T>> {
   if (!navigator.onLine) {
-    throw new Error('Sin conexión a internet. Conéctate para operar con el inventario.');
+    throw new Error('OFFLINE_ERROR');
   }
 
   const pin = getStoredUserPin();
@@ -150,7 +201,7 @@ async function requestApi<T>(
     response = await fetch(url, options);
   } catch (netErr: any) {
     throw new Error(
-      `No se pudo conectar con el servidor: ${netErr?.message || 'Error de red'}`
+      `CONNECTION_FAILED: ${netErr?.message || 'Error de red'}`
     );
   }
 
@@ -167,12 +218,12 @@ async function requestApi<T>(
   try {
     data = await response.json();
   } catch {
-    throw new Error('Respuesta inválida recibida del servidor (no es JSON válido).');
+    throw new Error('INVALID_JSON_RESPONSE');
   }
 
   // Handle Apps Script error reporting
   if (data.ok === false || (data as any).success === false) {
-    const msg = data.error || data.mensaje || 'Error desconocido reportado por el servidor.';
+    const msg = data.error || data.mensaje || 'SERVER_REPORTED_ERROR';
     throw new Error(msg);
   }
 
@@ -187,10 +238,11 @@ export interface DatosIniciales {
   productos: Producto[];
   categorias: Categoria[];
   movimientos: Movimiento[];
+  configuracion: Record<string, string>;
 }
 
 /**
- * Obtener productos, categorías y movimientos en una sola solicitud inicial
+ * Obtener productos, categorías, movimientos y configuración en una sola solicitud inicial
  */
 export async function getDatosIniciales(): Promise<DatosIniciales> {
   const res = await requestApi<any>('GET', { action: 'inicial' });
@@ -198,11 +250,17 @@ export async function getDatosIniciales(): Promise<DatosIniciales> {
   const rawProductos = res.productos || (res.resultado as any)?.productos || [];
   const rawCategorias = res.categorias || (res.resultado as any)?.categorias || [];
   const rawMovimientos = res.movimientos || (res.resultado as any)?.movimientos || [];
+  const rawConfig = res.configuracion || (res.resultado as any)?.configuracion || [];
 
   return {
-    productos: rawProductos.map(normalizeProducto).filter((p: Producto) => p.Estado !== 'ARCHIVADO'),
-    categorias: rawCategorias.map(normalizeCategoria),
+    productos: rawProductos
+      .map(normalizeProducto)
+      .filter((p: Producto) => p.Estado !== 'ARCHIVADO'),
+    categorias: rawCategorias
+      .map(normalizeCategoria)
+      .filter((c: Categoria) => c.nombre && c.nombre !== '[object Object]'),
     movimientos: rawMovimientos.map(normalizeMovimiento),
+    configuracion: normalizeConfiguracion(rawConfig),
   };
 }
 
@@ -221,7 +279,9 @@ export async function getInventario(): Promise<Producto[]> {
 export async function getCategorias(): Promise<Categoria[]> {
   const res = await requestApi<any>('GET', { action: 'categorias' });
   const list = res.categorias || (Array.isArray(res.resultado) ? res.resultado : []);
-  return list.map(normalizeCategoria);
+  return list
+    .map(normalizeCategoria)
+    .filter((c: Categoria) => c.nombre && c.nombre !== '[object Object]');
 }
 
 /**
@@ -290,12 +350,36 @@ export async function archivarProducto(id: string | number): Promise<BackendResp
 }
 
 /**
- * Crear una nueva categoría en Google Sheets
+ * Crear una nueva categoría en Google Sheets.
+ * Envía `nombre` (esperado por Google Apps Script) y `categoria` para compatibilidad completa.
  */
 export async function crearCategoria(nombreCategoria: string): Promise<BackendResponse> {
+  const nombreLimpio = nombreCategoria.trim();
   const res = await requestApi<any>('POST', undefined, {
     action: 'crearCategoria',
-    categoria: nombreCategoria.trim(),
+    nombre: nombreLimpio,
+    categoria: nombreLimpio,
   });
   return res;
+}
+
+/**
+ * Guardar preferencia en la hoja Configuracion de Google Sheets.
+ * Se maneja silenciosamente si la acción no está implementada en Apps Script.
+ */
+export async function guardarConfiguracion(
+  clave: string,
+  valor: string
+): Promise<BackendResponse> {
+  try {
+    const res = await requestApi<any>('POST', undefined, {
+      action: 'guardarConfiguracion',
+      clave: clave.trim(),
+      valor: valor.trim(),
+    });
+    return res;
+  } catch (err) {
+    // Mantener preferencia en memoria si la acción no está soportada aún en Apps Script
+    return { ok: true };
+  }
 }

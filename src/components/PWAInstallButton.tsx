@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Download, Share2, X, Smartphone, PlusSquare } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { useLanguage } from '../i18n/LanguageContext';
 
 export const PWAInstallButton: React.FC = () => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const { t } = useLanguage();
   const [showIOSModal, setShowIOSModal] = useState(false);
 
   // If already installed or running as standalone, don't show
@@ -14,10 +16,10 @@ export const PWAInstallButton: React.FC = () => {
       <button
         onClick={install}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 active:scale-95 rounded-full transition shadow-xs"
-        title="Instalar Mi Freezer en este dispositivo"
+        title={t.instalarApp}
       >
         <Download className="w-3.5 h-3.5" />
-        <span>Instalar App</span>
+        <span>{t.instalarApp}</span>
       </button>
     );
   }
@@ -28,10 +30,10 @@ export const PWAInstallButton: React.FC = () => {
         <button
           onClick={() => setShowIOSModal(true)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-sky-700 bg-sky-100 hover:bg-sky-200 active:scale-95 rounded-full transition shadow-xs"
-          title="Instalar en iPhone / iPad"
+          title={t.instalarPWA}
         >
           <Smartphone className="w-3.5 h-3.5" />
-          <span>Instalar PWA</span>
+          <span>{t.instalarPWA}</span>
         </button>
 
         {showIOSModal && (
@@ -40,7 +42,7 @@ export const PWAInstallButton: React.FC = () => {
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <span className="text-xl">❄️</span>
-                  <h3 className="font-semibold text-slate-900">Instalar en tu iPhone / iPad</h3>
+                  <h3 className="font-semibold text-slate-900">{t.instalarIosTitulo}</h3>
                 </div>
                 <button
                   onClick={() => setShowIOSModal(false)}
@@ -56,8 +58,8 @@ export const PWAInstallButton: React.FC = () => {
                     <Share2 className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">1. Toca el botón Compartir</p>
-                    <p className="text-xs text-slate-500">En la barra inferior de Safari.</p>
+                    <p className="font-medium text-slate-900">{t.paso1IosTitulo}</p>
+                    <p className="text-xs text-slate-500">{t.paso1IosDesc}</p>
                   </div>
                 </div>
 
@@ -66,13 +68,13 @@ export const PWAInstallButton: React.FC = () => {
                     <PlusSquare className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-900">2. Elige "Agregar a Inicio"</p>
-                    <p className="text-xs text-slate-500">Desplaza hacia abajo en las opciones.</p>
+                    <p className="font-medium text-slate-900">{t.paso2IosTitulo}</p>
+                    <p className="text-xs text-slate-500">{t.paso2IosDesc}</p>
                   </div>
                 </div>
 
                 <p className="text-xs text-slate-500 text-center pt-1">
-                  ¡Listo! Podrás abrir <strong>Mi Freezer</strong> a pantalla completa como una app nativa.
+                  {t.iosListoDesc}
                 </p>
               </div>
 
@@ -80,7 +82,7 @@ export const PWAInstallButton: React.FC = () => {
                 onClick={() => setShowIOSModal(false)}
                 className="mt-5 w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-medium text-sm transition shadow-sm active:scale-[0.98]"
               >
-                Entendido
+                {t.entendidoBtn}
               </button>
             </div>
           </div>

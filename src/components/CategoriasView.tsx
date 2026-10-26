@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Tag, Plus, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Categoria, Producto } from '../types/freezer';
 import { getCategoryEmoji } from '../utils/formatters';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface CategoriasViewProps {
   categorias: Categoria[];
@@ -16,6 +17,7 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
   onCrearCategoria,
   onSelectCategoria,
 }) => {
+  const { t, translateCategory } = useLanguage();
   const [nuevaCat, setNuevaCat] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,15 +30,19 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
 
     const limpio = nuevaCat.trim();
     if (!limpio) {
-      setError('Escribe el nombre de la categoría.');
+      setError(t.errorNombreCategoriaVacio);
       return;
     }
 
+    // Check duplicate against existing category names or visual translations
     const existe = categorias.some(
-      (c) => c.Categoria.toLowerCase() === limpio.toLowerCase()
+      (c) =>
+        (c.nombre || '').toLowerCase() === limpio.toLowerCase() ||
+        translateCategory(c.nombre || '').toLowerCase() === limpio.toLowerCase()
     );
+
     if (existe) {
-      setError(`La categoría "${limpio}" ya existe.`);
+      setError(t.errorCategoriaExiste);
       return;
     }
 
@@ -44,7 +50,7 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
       setLoading(true);
       await onCrearCategoria(limpio);
       setNuevaCat('');
-      setSuccessMsg(`Categoría "${limpio}" creada correctamente.`);
+      setSuccessMsg(t.categoriaCreadaExito);
       setTimeout(() => setSuccessMsg(null), 3500);
     } catch (err: any) {
       setError(err?.message || 'Error al guardar la categoría.');
@@ -56,9 +62,9 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
   return (
     <div className="space-y-4 pb-24">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">Categorías de Alimentos</h2>
+        <h2 className="text-lg font-bold text-slate-900">{t.categoriasTitulo}</h2>
         <p className="text-xs text-slate-500">
-          Organiza tus alimentos congelados por sectores
+          {t.categoriasSubtitulo}
         </p>
       </div>
 
@@ -69,7 +75,7 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
       >
         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
           <Plus className="w-3.5 h-3.5 text-sky-600" />
-          <span>Nueva Categoría</span>
+          <span>{t.nuevaCategoriaTitulo}</span>
         </h4>
 
         {error && (
@@ -91,7 +97,7 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
             type="text"
             value={nuevaCat}
             onChange={(e) => setNuevaCat(e.target.value)}
-            placeholder="Ej. Mariscos, Lácteos, Helados..."
+            placeholder={t.nuevaCategoriaPlaceholder}
             disabled={loading}
             className="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
           />
@@ -100,8 +106,12 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
             disabled={loading || !nuevaCat.trim()}
             className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-1.5"
           >
-            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-            <span>Crear</span>
+            {loading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Plus className="w-3.5 h-3.5" />
+            )}
+            <span>{t.crearCategoriaBtn}</span>
           </button>
         </div>
       </form>
@@ -109,32 +119,39 @@ export const CategoriasView: React.FC<CategoriasViewProps> = ({
       {/* Grid de categorías */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {categorias.map((cat) => {
-          const count = productos.filter(
-            (p) => p.Categoria.toLowerCase() === cat.Categoria.toLowerCase()
-          ).length;
+          const rawNombre = cat.nombre || '';
+          const nombreVisual = translateCategory(rawNombre);
+
+          const count = productos.filter((p) => {
+            const pCat = (p.Categoria || '').toLowerCase().trim();
+            return (
+              pCat === rawNombre.toLowerCase().trim() ||
+              pCat === nombreVisual.toLowerCase().trim()
+            );
+          }).length;
 
           return (
             <div
-              key={cat.ID || cat.Categoria}
-              onClick={() => onSelectCategoria(cat.Categoria)}
+              key={cat.id || rawNombre}
+              onClick={() => onSelectCategoria(rawNombre)}
               className="p-3.5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-sky-300 transition flex items-center justify-between cursor-pointer group active:scale-[0.99]"
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl p-2 rounded-xl bg-sky-50/70 border border-sky-100 group-hover:scale-105 transition">
-                  {getCategoryEmoji(cat.Categoria)}
+                  {getCategoryEmoji(rawNombre)}
                 </span>
                 <div>
                   <h4 className="font-bold text-slate-800 text-sm group-hover:text-sky-700 transition">
-                    {cat.Categoria}
+                    {nombreVisual}
                   </h4>
                   <p className="text-[11px] text-slate-400">
-                    {count} {count === 1 ? 'producto activo' : 'productos activos'}
+                    {count} {count === 1 ? t.productoActivo : t.productosActivos}
                   </p>
                 </div>
               </div>
 
               <span className="text-xs font-semibold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-lg group-hover:bg-sky-100 transition">
-                Ver →
+                {t.verCategoriaBtn}
               </span>
             </div>
           );

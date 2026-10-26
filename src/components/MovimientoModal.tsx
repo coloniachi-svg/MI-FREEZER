@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Minus, Plus, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Producto, TipoMovimiento } from '../types/freezer';
-import { formatCantidad, formatUnidad, parseDecimalInput } from '../utils/formatters';
+import { parseDecimalInput } from '../utils/formatters';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface MovimientoModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
   onClose,
   onConfirm,
 }) => {
+  const { t, formatCantidadLocale, formatUnidadLocale } = useLanguage();
   const [cantidadStr, setCantidadStr] = useState<string>('1');
   const [observacion, setObservacion] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -35,13 +37,13 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
     const cantidad = parseDecimalInput(cantidadStr);
 
     if (isNaN(cantidad) || cantidad <= 0) {
-      setError('Ingresa una cantidad válida mayor a 0.');
+      setError(t.errorCantidadInvalida);
       return;
     }
 
     if (isSalida && cantidad > available) {
       setError(
-        `No puedes retirar más de lo disponible (${formatUnidad(available, producto.Unidad)}).`
+        `${t.errorRetirarMasDeDisponible} (${formatUnidadLocale(available, producto.Unidad)}).`
       );
       return;
     }
@@ -68,11 +70,15 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
                 isSalida ? 'bg-amber-500 shadow-amber-200' : 'bg-emerald-500 shadow-emerald-200'
               } shadow-sm`}
             >
-              {isSalida ? <Minus className="w-5 h-5 stroke-[2.5]" /> : <Plus className="w-5 h-5 stroke-[2.5]" />}
+              {isSalida ? (
+                <Minus className="w-5 h-5 stroke-[2.5]" />
+              ) : (
+                <Plus className="w-5 h-5 stroke-[2.5]" />
+              )}
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-base leading-tight">
-                {isSalida ? 'Retirar' : 'Agregar'}
+                {isSalida ? t.retirarTitulo : t.agregarTitulo}
               </h3>
               <p className="text-xs text-slate-500 font-medium truncate max-w-[200px]">
                 {producto.Producto}
@@ -90,9 +96,9 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
 
         {/* Current status pill */}
         <div className="mt-3.5 p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs">
-          <span className="text-slate-500 font-medium">Disponible actual:</span>
+          <span className="text-slate-500 font-medium">{t.disponibleActual}</span>
           <span className="font-bold text-slate-800 text-sm">
-            {formatUnidad(available, producto.Unidad)}
+            {formatUnidadLocale(available, producto.Unidad)}
           </span>
         </div>
 
@@ -106,7 +112,7 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
         <form onSubmit={handleSubmit} className="mt-4 space-y-3.5">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Cantidad a {isSalida ? 'retirar' : 'agregar'} ({producto.Unidad})
+              {isSalida ? t.cantidadRetirar : t.cantidadAgregar} ({producto.Unidad})
             </label>
             <div className="relative">
               <input
@@ -129,7 +135,7 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
                   onClick={() => setCantidadStr(preset.toString().replace('.', ','))}
                   className="px-2.5 py-1 text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 active:scale-95 rounded-lg border border-sky-200 transition"
                 >
-                  +{formatCantidad(preset)}
+                  +{formatCantidadLocale(preset)}
                 </button>
               ))}
               {isSalida && available > 0 && (
@@ -139,7 +145,7 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
                   onClick={() => setCantidadStr(available.toString().replace('.', ','))}
                   className="px-2.5 py-1 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 active:scale-95 rounded-lg border border-amber-200 transition"
                 >
-                  Todo ({formatCantidad(available)})
+                  {t.todo} ({formatCantidadLocale(available)})
                 </button>
               )}
             </div>
@@ -147,13 +153,13 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Observación <span className="font-normal text-slate-400">(opcional)</span>
+              {t.observacionLabel} <span className="font-normal text-slate-400">({t.opcional})</span>
             </label>
             <input
               type="text"
               value={observacion}
               onChange={(e) => setObservacion(e.target.value)}
-              placeholder={isSalida ? 'Ej. Almuerzo del domingo' : 'Ej. Compra en carnicería'}
+              placeholder={isSalida ? t.obsPlaceholderRetirar : t.obsPlaceholderAgregar}
               disabled={loading}
               className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
             />
@@ -166,7 +172,7 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
               disabled={loading}
               className="w-1/2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition"
             >
-              Cancelar
+              {t.cancelar}
             </button>
             <button
               type="submit"
@@ -180,12 +186,12 @@ export const MovimientoModal: React.FC<MovimientoModalProps> = ({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Guardando...</span>
+                  <span>{t.guardando}</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>{isSalida ? 'Retirar' : 'Agregar'}</span>
+                  <span>{isSalida ? t.retirarProducto : t.agregarProducto}</span>
                 </>
               )}
             </button>

@@ -16,6 +16,49 @@
     <meta property="og:description" content="Control de inventario inteligente y rápido para tu freezer con Google Sheets." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary" />
+    <script>
+      (function () {
+        // HMR is disabled in AI Studio environment. Filter WebSocket closing error.
+        var origConsoleError = console.error;
+        console.error = function () {
+          for (var i = 0; i < arguments.length; i++) {
+            var arg = arguments[i];
+            if (
+              typeof arg === 'string' &&
+              (arg.indexOf('WebSocket closed without opened') !== -1 ||
+               arg.indexOf('[vite] Error: WebSocket') !== -1)
+            ) {
+              return;
+            }
+          }
+          return origConsoleError.apply(console, arguments);
+        };
+
+        window.addEventListener('error', function (event) {
+          if (
+            event.message &&
+            (event.message.indexOf('WebSocket') !== -1 ||
+             event.filename && event.filename.indexOf('@vite/client') !== -1)
+          ) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function (event) {
+          if (
+            event.reason &&
+            (String(event.reason).indexOf('WebSocket') !== -1 ||
+             String(event.reason && event.reason.stack).indexOf('@vite/client') !== -1)
+          ) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+            return true;
+          }
+        }, true);
+      })();
+    </script>
   </head>
   <body class="bg-slate-50 text-slate-800 antialiased selection:bg-sky-200">
     <div id="root"></div>

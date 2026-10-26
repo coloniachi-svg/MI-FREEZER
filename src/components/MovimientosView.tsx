@@ -4,13 +4,12 @@ import {
   ArrowUpRight,
   Sliders,
   Search,
-  Filter,
   Calendar,
   RefreshCw,
   Clock,
 } from 'lucide-react';
 import { Movimiento, TipoMovimiento } from '../types/freezer';
-import { formatCantidad, formatDateSpanish } from '../utils/formatters';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface MovimientosViewProps {
   movimientos: Movimiento[];
@@ -23,6 +22,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
   loading,
   onRefresh,
 }) => {
+  const { t, translateMovement, formatDateLocale, formatCantidadLocale } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [tipoFiltro, setTipoFiltro] = useState<TipoMovimiento | 'TODOS'>('TODOS');
   const [refreshing, setRefreshing] = useState(false);
@@ -53,10 +53,11 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
       <div className="flex items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <span>Historial de Movimientos</span>
+            <span>{t.movimientosTitulo}</span>
           </h2>
           <p className="text-xs text-slate-500">
-            {filtered.length} {filtered.length === 1 ? 'registro' : 'registros'} encontrados
+            {filtered.length}{' '}
+            {filtered.length === 1 ? t.registroEncontrado : t.registrosEncontrados}
           </p>
         </div>
 
@@ -64,7 +65,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
           onClick={handleRefresh}
           disabled={loading || refreshing}
           className="p-2 rounded-xl text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-100 transition active:scale-95 disabled:opacity-50"
-          title="Actualizar historial"
+          title={t.sincronizar}
         >
           <RefreshCw
             className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -80,7 +81,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Filtrar por nombre de alimento..."
+            placeholder={t.filtrarAlimentoPlaceholder}
             className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
           />
         </div>
@@ -89,6 +90,15 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
         <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
           {(['TODOS', 'ENTRADA', 'SALIDA', 'AJUSTE'] as const).map((tipo) => {
             const isSelected = tipoFiltro === tipo;
+            const label =
+              tipo === 'TODOS'
+                ? t.filtroTodos
+                : tipo === 'ENTRADA'
+                ? t.filtroEntradas
+                : tipo === 'SALIDA'
+                ? t.filtroSalidas
+                : t.filtroAjustes;
+
             return (
               <button
                 key={tipo}
@@ -99,13 +109,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
                     : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                 }`}
               >
-                {tipo === 'TODOS'
-                  ? 'Todos'
-                  : tipo === 'ENTRADA'
-                  ? '⬇️ Entradas'
-                  : tipo === 'SALIDA'
-                  ? '⬆️ Salidas'
-                  : '⚖️ Ajustes'}
+                {label}
               </button>
             );
           })}
@@ -116,11 +120,11 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
       {filtered.length === 0 ? (
         <div className="text-center py-12 px-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
           <Clock className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-          <h4 className="font-semibold text-slate-700 text-sm">No hay movimientos registrados</h4>
+          <h4 className="font-semibold text-slate-700 text-sm">{t.sinMovimientosTitulo}</h4>
           <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
             {searchTerm || tipoFiltro !== 'TODOS'
-              ? 'Prueba a cambiar o limpiar los filtros de búsqueda.'
-              : 'Los registros de entradas, salidas y ajustes aparecerán aquí.'}
+              ? t.sinMovimientosFiltroDesc
+              : t.sinMovimientosDesc}
           </p>
         </div>
       ) : (
@@ -130,6 +134,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
             const isEntrada = tipo === 'ENTRADA';
             const isSalida = tipo === 'SALIDA';
             const isAjuste = tipo === 'AJUSTE';
+            const translatedTipo = translateMovement(tipo);
 
             return (
               <div
@@ -163,7 +168,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
                       <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" />
-                          <span>{formatDateSpanish(mov.Fecha)}</span>
+                          <span>{formatDateLocale(mov.Fecha, true)}</span>
                         </span>
                       </div>
                     </div>
@@ -180,8 +185,8 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
                           : 'text-sky-700'
                       }`}
                     >
-                      {isEntrada ? '+' : isSalida ? '-' : 'Saldo: '}
-                      {formatCantidad(mov.Cantidad)}
+                      {isEntrada ? '+' : isSalida ? '-' : `${t.saldoMovimientoPrefix} `}
+                      {formatCantidadLocale(mov.Cantidad)}
                     </div>
                     <span
                       className={`inline-block text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-md mt-0.5 ${
@@ -192,7 +197,7 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
                           : 'bg-sky-100/70 text-sky-800'
                       }`}
                     >
-                      {mov.Tipo}
+                      {translatedTipo}
                     </span>
                   </div>
                 </div>
@@ -200,18 +205,21 @@ export const MovimientosView: React.FC<MovimientosViewProps> = ({
                 {/* Subdetails: Saldo Anterior -> Saldo Posterior */}
                 <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
                   <div className="flex items-center gap-1.5">
-                    <span>Saldo:</span>
+                    <span>{t.saldoMovimientoPrefix}</span>
                     <span className="font-mono text-slate-600">
-                      {formatCantidad(mov.SaldoAnterior)}
+                      {formatCantidadLocale(mov.SaldoAnterior)}
                     </span>
                     <span>→</span>
                     <span className="font-mono font-semibold text-slate-800">
-                      {formatCantidad(mov.SaldoPosterior)}
+                      {formatCantidadLocale(mov.SaldoPosterior)}
                     </span>
                   </div>
 
                   {mov.Observacion && (
-                    <span className="italic text-slate-500 truncate max-w-[160px]" title={mov.Observacion}>
+                    <span
+                      className="italic text-slate-500 truncate max-w-[160px]"
+                      title={mov.Observacion}
+                    >
                       "{mov.Observacion}"
                     </span>
                   )}

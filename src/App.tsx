@@ -5,7 +5,6 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Package,
   History,
   Tags,
   Settings,
@@ -14,16 +13,22 @@ import {
   AlertCircle,
   CheckCircle2,
   X,
-  WifiOff,
 } from 'lucide-react';
-import { Categoria, CrearProductoDTO, EditarProductoDTO, Movimiento, Producto } from './types/freezer';
+import {
+  Categoria,
+  CrearProductoDTO,
+  EditarProductoDTO,
+  LanguageCode,
+  Movimiento,
+  Producto,
+} from './types/freezer';
 import {
   archivarProducto,
   crearCategoria,
   crearProducto,
   editarProducto,
   getDatosIniciales,
-  getStoredUserPin,
+  guardarConfiguracion,
   registrarMovimiento,
 } from './services/backend';
 import { InventarioView } from './components/InventarioView';
@@ -36,7 +41,8 @@ import { EditarProductoModal } from './components/EditarProductoModal';
 import { PinModal } from './components/PinModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallButton } from './components/PWAInstallButton';
-import { formatCantidad } from './utils/formatters';
+import { LanguageSelector } from './components/LanguageSelector';
+import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
 
 type TabView = 'inventario' | 'movimientos' | 'categorias' | 'ajustes';
 
@@ -46,8 +52,10 @@ interface Toast {
   message: string;
 }
 
-export default function App() {
-  // Navigation
+function MainFreezerApp() {
+  const { t, lang, setLang, formatCantidadLocale, formatUnidadLocale } = useLanguage();
+
+  // Navigation state (preserved in memory)
   const [activeTab, setActiveTab] = useState<TabView>('inventario');
 
   // In-memory application state
@@ -101,18 +109,32 @@ export default function App() {
       setCategorias(data.categorias);
       setMovimientos(data.movimientos);
       setIsLocked(false);
+
+      // Check if language was stored in Google Sheets Configuracion sheet
+      const langConfig =
+        data.configuracion?.['idioma'] ||
+        data.configuracion?.['lang'] ||
+        data.configuracion?.['language'];
+
+      if (langConfig && (langConfig === 'de' || langConfig === 'es')) {
+        setLang(langConfig as LanguageCode);
+      }
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
       } else {
-        setGlobalError(err?.message || 'Error al conectar con Google Sheets.');
+        const errorMsg =
+          err?.message === 'OFFLINE_ERROR'
+            ? t.offlineAviso
+            : err?.message || t.errorConexionTitulo;
+        setGlobalError(errorMsg);
       }
     } finally {
       if (!isSilent) {
         setLoadingInitial(false);
       }
     }
-  }, []);
+  }, [setLang, t.errorConexionTitulo, t.offlineAviso]);
 
   useEffect(() => {
     cargarDatos();
@@ -154,10 +176,14 @@ export default function App() {
       };
       setMovimientos((prev) => [nuevoMovimiento, ...prev]);
 
-      showToast(
-        `${tipo === 'ENTRADA' ? 'Agregado' : 'Retirado'} con éxito: ${formatCantidad(cantidad)} ${producto.Unidad} de ${producto.Producto}.`,
-        'success'
-      );
+      const template =
+        tipo === 'ENTRADA' ? t.toastAgregadoExito : t.toastRetiradoExito;
+      const msg = template
+        .replace('{cantidad}', formatCantidadLocale(cantidad))
+        .replace('{unidad}', producto.Unidad)
+        .replace('{producto}', producto.Producto);
+
+      showToast(msg, 'success');
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -204,7 +230,12 @@ export default function App() {
       };
       setMovimientos((prev) => [nuevoMov, ...prev]);
 
-      showToast(`Saldo ajustado a ${formatCantidad(nuevoSaldo)} ${target.Unidad}.`, 'success');
+      const msg = t.toastAjusteExito
+        .replace('{producto}', target.Producto)
+        .replace('{cantidad}', formatCantidadLocale(nuevoSaldo))
+        .replace('{unidad}', target.Unidad);
+
+      showToast(msg, 'success');
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -250,7 +281,10 @@ export default function App() {
         ]);
       }
 
-      showToast(`"${dto.producto}" guardado en Google Sheets.`, 'success');
+      showToast(
+        t.toastProductoCreadoExito.replace('{producto}', dto.producto),
+        'success'
+      );
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -273,7 +307,10 @@ export default function App() {
             : p
         )
       );
-      showToast('Cambios del producto guardados.', 'success');
+      showToast(
+        t.toastProductoEditadoExito.replace('{producto}', dto.producto),
+        'success'
+      );
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -290,7 +327,7 @@ export default function App() {
     try {
       await archivarProducto(productoId);
       setProductos((prev) => prev.filter((p) => p.ID !== productoId));
-      showToast('Producto archivado correctamente.', 'info');
+      showToast(t.toastProductoArchivadoExito, 'info');
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -306,12 +343,18 @@ export default function App() {
     setActionLoading(true);
     try {
       const res = await crearCategoria(nombreCat);
+      const cleanNombre = nombreCat.trim();
       const nueva: Categoria = {
-        ID: (res as any)?.id || nombreCat,
-        Categoria: nombreCat,
+        id: (res as any)?.id || cleanNombre,
+        nombre: cleanNombre,
+        ID: (res as any)?.id || cleanNombre,
+        Categoria: cleanNombre,
       };
       setCategorias((prev) => [...prev, nueva]);
-      showToast(`Categoría "${nombreCat}" agregada.`, 'success');
+      showToast(
+        t.toastCategoriaCreadaExito.replace('{categoria}', cleanNombre),
+        'success'
+      );
     } catch (err: any) {
       if (err?.code === 'UNAUTHORIZED') {
         setIsLocked(true);
@@ -336,20 +379,24 @@ export default function App() {
             </div>
             <div>
               <h1 className="font-extrabold text-base tracking-tight text-slate-900 leading-none">
-                Mi Freezer
+                {t.appName}
               </h1>
               <p className="text-[10px] font-semibold text-sky-600 tracking-wider uppercase mt-0.5">
-                Control de Inventario
+                {t.appSubtitle}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Compact DE | ES Language Selector (always accessible) */}
+            <LanguageSelector />
+
             <PWAInstallButton />
+
             <button
               onClick={() => setIsLocked(true)}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-              title="Bloquear acceso con PIN"
+              title={t.bloquearBtn}
             >
               <Lock className="w-4 h-4" />
             </button>
@@ -369,9 +416,9 @@ export default function App() {
               <Loader2 className="w-6 h-6 text-sky-500 animate-spin absolute -bottom-1 -right-1" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-sm">Cargando Mi Freezer...</h3>
+              <h3 className="font-bold text-slate-800 text-sm">{t.cargandoTitulo}</h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Sincronizando productos y movimientos
+                {t.cargandoSubtitulo}
               </p>
             </div>
           </div>
@@ -381,7 +428,9 @@ export default function App() {
               <AlertCircle className="w-6 h-6" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-sm">No pudimos conectar con el servidor</h3>
+              <h3 className="font-bold text-slate-900 text-sm">
+                {t.errorConexionTitulo}
+              </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
                 {globalError}
               </p>
@@ -390,7 +439,7 @@ export default function App() {
               onClick={() => cargarDatos()}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs shadow-sm transition active:scale-95"
             >
-              Reintentar conexión
+              {t.reintentarConexion}
             </button>
           </div>
         ) : (
@@ -456,7 +505,7 @@ export default function App() {
             }`}
           >
             <span className="text-lg">❄️</span>
-            <span className="text-[10px] mt-0.5">Inventario</span>
+            <span className="text-[10px] mt-0.5">{t.navInventario}</span>
           </button>
 
           <button
@@ -468,7 +517,7 @@ export default function App() {
             }`}
           >
             <History className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Movimientos</span>
+            <span className="text-[10px] mt-0.5">{t.navMovimientos}</span>
           </button>
 
           <button
@@ -480,7 +529,7 @@ export default function App() {
             }`}
           >
             <Tags className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Categorías</span>
+            <span className="text-[10px] mt-0.5">{t.navCategorias}</span>
           </button>
 
           <button
@@ -492,7 +541,7 @@ export default function App() {
             }`}
           >
             <Settings className="w-5 h-5" />
-            <span className="text-[10px] mt-0.5">Ajustes</span>
+            <span className="text-[10px] mt-0.5">{t.navAjustes}</span>
           </button>
         </div>
       </nav>
@@ -562,5 +611,18 @@ export default function App() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  const handleLanguageChange = (newLang: LanguageCode) => {
+    // Attempt saving to Google Sheets Configuracion sheet (silently in memory if not implemented yet)
+    guardarConfiguracion('idioma', newLang);
+  };
+
+  return (
+    <LanguageProvider initialLang="de" onLanguageChange={handleLanguageChange}>
+      <MainFreezerApp />
+    </LanguageProvider>
   );
 }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, Plus, Loader2, AlertCircle, CheckCircle2, Tag } from 'lucide-react';
+import { Plus, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Categoria, CrearProductoDTO, Producto, UnidadMedida } from '../types/freezer';
 import { parseDecimalInput } from '../utils/formatters';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface NuevoProductoModalProps {
   isOpen: boolean;
@@ -12,13 +13,6 @@ interface NuevoProductoModalProps {
   onCrearCategoria: (categoria: string) => Promise<void>;
 }
 
-const UNIDADES: { value: UnidadMedida; label: string }[] = [
-  { value: 'kg', label: 'Kilogramos (kg)' },
-  { value: 'g', label: 'Gramos (g)' },
-  { value: 'unidad', label: 'Unidades (u)' },
-  { value: 'litro', label: 'Litros (l)' },
-];
-
 export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
   isOpen,
   categorias,
@@ -27,6 +21,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
   onCrear,
   onCrearCategoria,
 }) => {
+  const { t, lang, translateCategory } = useLanguage();
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [nuevaCat, setNuevaCat] = useState('');
@@ -39,7 +34,23 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
 
   if (!isOpen) return null;
 
-  const defaultCat = categoria || (categorias.length > 0 ? categorias[0].Categoria : 'Carnes');
+  const defaultCat =
+    categoria || (categorias.length > 0 ? categorias[0].nombre : 'Carnes');
+
+  const unidadesList: { value: UnidadMedida; label: string }[] =
+    lang === 'de'
+      ? [
+          { value: 'kg', label: 'Kilogramm (kg)' },
+          { value: 'g', label: 'Gramm (g)' },
+          { value: 'unidad', label: 'Stück (Stk)' },
+          { value: 'litro', label: 'Liter (l)' },
+        ]
+      : [
+          { value: 'kg', label: 'Kilogramos (kg)' },
+          { value: 'g', label: 'Gramos (g)' },
+          { value: 'unidad', label: 'Unidades (u)' },
+          { value: 'litro', label: 'Litros (l)' },
+        ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,7 +58,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
 
     const nombreLimpio = nombre.trim();
     if (!nombreLimpio) {
-      setError('Por favor indica el nombre del producto.');
+      setError(t.errorNombreVacio);
       return;
     }
 
@@ -56,7 +67,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
       (p) => p.Producto.trim().toLowerCase() === nombreLimpio.toLowerCase()
     );
     if (duplicado) {
-      setError(`Ya existe un producto activo con el nombre "${nombreLimpio}".`);
+      setError(`${t.errorNombreDuplicado} "${nombreLimpio}".`);
       return;
     }
 
@@ -69,12 +80,12 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
     const minimo = parseDecimalInput(minimoStr);
 
     if (isNaN(saldo) || saldo < 0) {
-      setError('La cantidad inicial no puede ser negativa ni inválida.');
+      setError(t.errorSaldoInvalido);
       return;
     }
 
     if (isNaN(minimo) || minimo < 0) {
-      setError('La cantidad mínima de alerta no puede ser negativa.');
+      setError(t.errorMinimoInvalido);
       return;
     }
 
@@ -84,7 +95,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
       // If user created a new category inline, save it too
       if (mostrandoNuevaCat && nuevaCat.trim()) {
         const catExiste = categorias.some(
-          (c) => c.Categoria.toLowerCase() === nuevaCat.trim().toLowerCase()
+          (c) => c.nombre.toLowerCase() === nuevaCat.trim().toLowerCase()
         );
         if (!catExiste) {
           try {
@@ -105,7 +116,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
 
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Error al guardar el producto en Google Sheets.');
+      setError(err?.message || 'Error al guardar el producto.');
     } finally {
       setLoading(false);
     }
@@ -122,10 +133,10 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
             </div>
             <div>
               <h3 className="font-bold text-slate-900 text-base leading-tight">
-                Nuevo Producto
+                {t.nuevoProductoTitulo}
               </h3>
               <p className="text-xs text-slate-500">
-                Agregar alimento al freezer
+                {t.nuevoProductoSubtitulo}
               </p>
             </div>
           </div>
@@ -149,13 +160,13 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
           {/* Nombre */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Nombre del producto *
+              {t.nombreProductoLabel}
             </label>
             <input
               type="text"
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
-              placeholder="Ej. Pechuga de pollo, Pan francés, Espinaca"
+              placeholder={t.nombreProductoPlaceholder}
               disabled={loading}
               autoFocus
               className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
@@ -166,14 +177,14 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-slate-700">
-                Categoría *
+                {t.categoriaLabel}
               </label>
               <button
                 type="button"
                 onClick={() => setMostrandoNuevaCat(!mostrandoNuevaCat)}
                 className="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition"
               >
-                {mostrandoNuevaCat ? 'Elegir existente' : '+ Crear nueva'}
+                {mostrandoNuevaCat ? t.elegirExistente : t.crearNueva}
               </button>
             </div>
 
@@ -183,7 +194,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
                   type="text"
                   value={nuevaCat}
                   onChange={(e) => setNuevaCat(e.target.value)}
-                  placeholder="Nombre de la nueva categoría"
+                  placeholder={t.nuevaCatPlaceholder}
                   disabled={loading}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-sky-300 focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
                 />
@@ -196,18 +207,18 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
                 className="w-full px-3 py-2 text-sm rounded-xl border border-slate-300 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition cursor-pointer"
               >
                 {categorias.map((c) => (
-                  <option key={c.ID || c.Categoria} value={c.Categoria}>
-                    {c.Categoria}
+                  <option key={c.id || c.nombre} value={c.nombre}>
+                    {translateCategory(c.nombre)}
                   </option>
                 ))}
                 {categorias.length === 0 && (
                   <>
-                    <option value="Carnes">Carnes</option>
-                    <option value="Panificados">Panificados</option>
-                    <option value="Verduras">Verduras</option>
-                    <option value="Frutas">Frutas</option>
-                    <option value="Comidas preparadas">Comidas preparadas</option>
-                    <option value="Otros">Otros</option>
+                    <option value="Carnes">{translateCategory('Carnes')}</option>
+                    <option value="Panificados">{translateCategory('Panificados')}</option>
+                    <option value="Verduras">{translateCategory('Verduras')}</option>
+                    <option value="Frutas">{translateCategory('Frutas')}</option>
+                    <option value="Comidas preparadas">{translateCategory('Comidas preparadas')}</option>
+                    <option value="Otros">{translateCategory('Otros')}</option>
                   </>
                 )}
               </select>
@@ -217,10 +228,10 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
           {/* Unidad */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Unidad de medida
+              {t.unidadMedidaLabel}
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {UNIDADES.map((u) => (
+              {unidadesList.map((u) => (
                 <button
                   key={u.value}
                   type="button"
@@ -242,7 +253,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Cantidad inicial ({unidad})
+                {t.cantidadInicialLabel} ({unidad})
               </label>
               <input
                 type="text"
@@ -256,7 +267,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Alerta de stock bajo ({unidad})
+                {t.alertaMinimoLabel} ({unidad})
               </label>
               <input
                 type="text"
@@ -278,7 +289,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
               disabled={loading}
               className="w-1/2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition"
             >
-              Cancelar
+              {t.cancelar}
             </button>
             <button
               type="submit"
@@ -288,12 +299,12 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Guardando...</span>
+                  <span>{t.guardando}</span>
                 </>
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Guardar producto</span>
+                  <span>{t.guardarProductoBtn}</span>
                 </>
               )}
             </button>

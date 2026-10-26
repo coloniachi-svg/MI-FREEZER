@@ -28,10 +28,10 @@ export function getStoredUserPin(): string {
     return (
       sessionStorage.getItem(USER_PIN_STORAGE_KEY) ||
       localStorage.getItem(USER_PIN_STORAGE_KEY) ||
-      '1234'
-    );
+      ''
+    ).trim();
   } catch {
-    return '1234';
+    return '';
   }
 }
 

@@ -31,19 +31,21 @@ app.all('/api/backend', async (req, res) => {
     return res.sendStatus(204);
   }
 
-  const configuredUserPin =
-    process.env.FREEZER_USER_PIN || process.env.APP_ACCESS_PIN || '1234';
+  const configuredUserPin = process.env.FREEZER_USER_PIN;
+
+  if (!configuredUserPin) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Error de configuración del servidor: variable de autenticación requerida no configurada.',
+      code: 'CONFIG_ERROR',
+    });
+  }
 
   const clientPin =
     req.headers['x-user-pin'] ||
     req.headers['authorization']?.replace(/^Bearer\s+/i, '');
 
-  const isAuthorized =
-    !configuredUserPin ||
-    clientPin === configuredUserPin ||
-    clientPin === '1234';
-
-  if (!isAuthorized) {
+  if (!clientPin || clientPin !== configuredUserPin) {
     return res.status(401).json({
       ok: false,
       error: 'Acceso no autorizado: PIN de seguridad inválido o no suministrado.',

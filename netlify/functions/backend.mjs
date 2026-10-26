@@ -20,20 +20,31 @@ export default async (request, context) => {
     });
   }
 
-  const configuredUserPin =
-    process.env.FREEZER_USER_PIN || process.env.APP_ACCESS_PIN || '1234';
+  const configuredUserPin = process.env.FREEZER_USER_PIN;
+
+  if (!configuredUserPin) {
+    return new Response(
+      JSON.stringify({
+        ok: false,
+        error: 'Error de configuración del servidor: variable de autenticación requerida no configurada.',
+        code: 'CONFIG_ERROR',
+      }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      }
+    );
+  }
 
   // Validate single-user security PIN
   const clientPin =
     request.headers.get('x-user-pin') ||
     request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
 
-  const isAuthorized =
-    !configuredUserPin ||
-    clientPin === configuredUserPin ||
-    clientPin === '1234';
-
-  if (!isAuthorized) {
+  if (!clientPin || clientPin !== configuredUserPin) {
     return new Response(
       JSON.stringify({
         ok: false,

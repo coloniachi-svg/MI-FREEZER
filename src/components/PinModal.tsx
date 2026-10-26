@@ -20,7 +20,7 @@ export const PinModal: React.FC<PinModalProps> = ({
 }) => {
   const { t } = useLanguage();
   const currentStored = getStoredUserPin();
-  const [pin, setPin] = useState(currentStored === '1234' ? '' : currentStored);
+  const [pin, setPin] = useState(currentStored);
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,12 +37,6 @@ export const PinModal: React.FC<PinModalProps> = ({
     }
     setError(null);
     setStoredUserPin(pin.trim(), remember);
-    onSuccess();
-  };
-
-  const handleUseDefault = () => {
-    setPin('1234');
-    setStoredUserPin('1234', true);
     onSuccess();
   };
 
@@ -102,14 +96,6 @@ export const PinModal: React.FC<PinModalProps> = ({
             >
               <Check className="w-4 h-4" />
               <span>{t.desbloquearBtn}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleUseDefault}
-              className="w-full py-2 rounded-xl text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition"
-            >
-              {t.usarPinDefaultBtn}
             </button>
 
             {onClose && (

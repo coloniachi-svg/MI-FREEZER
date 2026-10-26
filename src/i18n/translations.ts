@@ -138,7 +138,6 @@ export interface Translations {
   pinInputLabel: string;
   pinInputPlaceholder: string;
   desbloquearBtn: string;
-  usarPinDefaultBtn: string;
   recordarDispositivo: string;
   errorPinVacio: string;
 
@@ -282,7 +281,7 @@ export const translations: Record<LanguageCode, Translations> = {
     pinSeccionDesc: 'Schütze deinen Bestand vor unbefugtem Zugriff',
     bloquearBtn: 'Sperren',
     cambiarPinLabel: 'PIN auf diesem Gerät ändern',
-    nuevoPinPlaceholder: 'Neuer PIN (z.B. 1234)',
+    nuevoPinPlaceholder: 'Neuer PIN',
     guardarPinBtn: 'Speichern',
     pinActualLabel: 'Aktueller PIN auf diesem Gerät:',
     pinActualizadoExito: 'PIN auf diesem Gerät erfolgreich aktualisiert.',
@@ -297,9 +296,8 @@ export const translations: Record<LanguageCode, Translations> = {
     pinModalTitulo: 'Sicherheit',
     pinModalDesc: 'Gib deinen Zugangs-PIN ein, um den Bestand zu synchronisieren und zu bearbeiten.',
     pinInputLabel: 'Zugangs-PIN',
-    pinInputPlaceholder: 'Z.B. 1234',
+    pinInputPlaceholder: '••••',
     desbloquearBtn: 'Entsperren und verbinden',
-    usarPinDefaultBtn: 'Standard-PIN verwenden (1234)',
     recordarDispositivo: 'Auf diesem Smartphone / Gerät merken',
     errorPinVacio: 'Bitte gib deinen PIN-Code ein.',
 
@@ -439,7 +437,7 @@ export const translations: Record<LanguageCode, Translations> = {
     pinSeccionDesc: 'Protege tu inventario contra accesos no deseados',
     bloquearBtn: 'Bloquear',
     cambiarPinLabel: 'Cambiar PIN en este celular',
-    nuevoPinPlaceholder: 'Nuevo PIN (ej. 1234)',
+    nuevoPinPlaceholder: 'Nuevo PIN',
     guardarPinBtn: 'Guardar',
     pinActualLabel: 'PIN configurado actual:',
     pinActualizadoExito: 'PIN actualizado correctamente en este dispositivo.',
@@ -454,9 +452,8 @@ export const translations: Record<LanguageCode, Translations> = {
     pinModalTitulo: 'Seguridad de Mi Freezer',
     pinModalDesc: 'Ingresa tu PIN de acceso para sincronizar y modificar el inventario.',
     pinInputLabel: 'PIN de Acceso',
-    pinInputPlaceholder: 'Ej. 1234',
+    pinInputPlaceholder: '••••',
     desbloquearBtn: 'Desbloquear y Conectar',
-    usarPinDefaultBtn: 'Usar PIN inicial por defecto (1234)',
     recordarDispositivo: 'Recordar en este celular / dispositivo',
     errorPinVacio: 'Por favor ingresa tu código PIN.',
 

@@ -17,52 +17,6 @@ import { parseDecimalInput } from '../utils/formatters';
 
 const BASE_API_URL = '/api/backend';
 
-// Storage key for user PIN on this client (Note: Only used for PIN security, not language or inventory)
-const USER_PIN_STORAGE_KEY = 'mi_freezer_user_pin';
-
-/**
- * Get current configured or stored user PIN
- */
-export function getStoredUserPin(): string {
-  try {
-    return (
-      sessionStorage.getItem(USER_PIN_STORAGE_KEY) ||
-      localStorage.getItem(USER_PIN_STORAGE_KEY) ||
-      ''
-    ).trim();
-  } catch {
-    return '';
-  }
-}
-
-/**
- * Set user PIN in local storage / session storage
- */
-export function setStoredUserPin(pin: string, remember = true): void {
-  try {
-    sessionStorage.setItem(USER_PIN_STORAGE_KEY, pin);
-    if (remember) {
-      localStorage.setItem(USER_PIN_STORAGE_KEY, pin);
-    } else {
-      localStorage.removeItem(USER_PIN_STORAGE_KEY);
-    }
-  } catch {
-    // ignore storage restrictions
-  }
-}
-
-/**
- * Clear stored user PIN
- */
-export function clearStoredUserPin(): void {
-  try {
-    sessionStorage.removeItem(USER_PIN_STORAGE_KEY);
-    localStorage.removeItem(USER_PIN_STORAGE_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 /**
  * Normalizes product numbers and categories from Google Sheets
  */
@@ -173,7 +127,6 @@ async function requestApi<T>(
     throw new Error('OFFLINE_ERROR');
   }
 
-  const pin = getStoredUserPin();
   let url = BASE_API_URL;
 
   if (params && Object.keys(params).length > 0) {
@@ -183,7 +136,6 @@ async function requestApi<T>(
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
-    'x-user-pin': pin,
   };
 
   const options: RequestInit = {
@@ -208,9 +160,8 @@ async function requestApi<T>(
   if (response.status === 401) {
     const errorData = await response.json().catch(() => ({}));
     const err = new Error(
-      errorData.error || 'PIN de acceso incorrecto o no autorizado.'
+      errorData.error || 'Acceso no autorizado por el servidor.'
     );
-    (err as any).code = 'UNAUTHORIZED';
     throw err;
   }
 
@@ -294,31 +245,39 @@ export async function getMovimientos(): Promise<Movimiento[]> {
 }
 
 /**
- * Crear un nuevo producto en Google Sheets
+ * Crear un nuevo producto en Google Sheets.
+ * Envía tanto `nombre` como `producto`, y `saldoInicial` para garantizar la compatibilidad con Apps Script.
  */
 export async function crearProducto(dto: CrearProductoDTO): Promise<BackendResponse> {
+  const nombreLimpio = dto.producto.trim();
   const res = await requestApi<any>('POST', undefined, {
     action: 'crearProducto',
-    producto: dto.producto.trim(),
+    nombre: nombreLimpio,
+    producto: nombreLimpio,
     categoria: dto.categoria.trim(),
     unidad: dto.unidad,
+    saldoInicial: dto.saldo,
     saldo: dto.saldo,
     minimo: dto.minimo,
+    stockMinimo: dto.minimo,
   });
   return res;
 }
 
 /**
- * Editar un producto existente (nombre, categoría, cantidad mínima)
+ * Editar un producto existente (nombre, categoría, cantidad mínima).
  * No modifica directamente el saldo.
  */
 export async function editarProducto(dto: EditarProductoDTO): Promise<BackendResponse> {
+  const nombreLimpio = dto.producto.trim();
   const res = await requestApi<any>('POST', undefined, {
     action: 'editarProducto',
     id: dto.id,
-    producto: dto.producto.trim(),
+    nombre: nombreLimpio,
+    producto: nombreLimpio,
     categoria: dto.categoria.trim(),
     minimo: dto.minimo,
+    stockMinimo: dto.minimo,
   });
   return res;
 }

@@ -26,31 +26,9 @@ app.all('/api/backend', async (req, res) => {
     res.set({
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, x-user-pin, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     });
     return res.sendStatus(204);
-  }
-
-  const configuredUserPin = process.env.FREEZER_USER_PIN;
-
-  if (!configuredUserPin) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Error de configuración del servidor: variable de autenticación requerida no configurada.',
-      code: 'CONFIG_ERROR',
-    });
-  }
-
-  const clientPin =
-    req.headers['x-user-pin'] ||
-    req.headers['authorization']?.replace(/^Bearer\s+/i, '');
-
-  if (!clientPin || clientPin !== configuredUserPin) {
-    return res.status(401).json({
-      ok: false,
-      error: 'Acceso no autorizado: PIN de seguridad inválido o no suministrado.',
-      code: 'UNAUTHORIZED',
-    });
   }
 
   const gasUrl = process.env.GAS_URL || DEFAULT_GAS_URL;

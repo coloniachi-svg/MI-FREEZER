@@ -116,14 +116,6 @@ export interface Translations {
   ajustesSubtitulo: string;
   idiomaSeccionTitulo: string;
   idiomaSeccionDesc: string;
-  pinSeccionTitulo: string;
-  pinSeccionDesc: string;
-  bloquearBtn: string;
-  cambiarPinLabel: string;
-  nuevoPinPlaceholder: string;
-  guardarPinBtn: string;
-  pinActualLabel: string;
-  pinActualizadoExito: string;
   pwaSeccionTitulo: string;
   pwaSeccionDesc: string;
   pwaDisponibilidadLabel: string;
@@ -131,15 +123,6 @@ export interface Translations {
   sincronizacionSeccionDesc: string;
   sincronizarBtn: string;
   sincronizadoExito: string;
-
-  // PIN Modal
-  pinModalTitulo: string;
-  pinModalDesc: string;
-  pinInputLabel: string;
-  pinInputPlaceholder: string;
-  desbloquearBtn: string;
-  recordarDispositivo: string;
-  errorPinVacio: string;
 
   // Offline & Connectivity
   offlineAviso: string;
@@ -273,18 +256,10 @@ export const translations: Record<LanguageCode, Translations> = {
     errorCategoriaExiste: 'Die Kategorie existiert bereits.',
     categoriaCreadaExito: 'Kategorie erfolgreich erstellt.',
 
-    ajustesTitulo: 'Einstellungen und Sicherheit',
+    ajustesTitulo: 'Einstellungen',
     ajustesSubtitulo: 'Persönliche Konfiguration von Mein Gefrierschrank',
     idiomaSeccionTitulo: 'Sprache / Idioma',
     idiomaSeccionDesc: 'Wähle die Anzeigesprache der App',
-    pinSeccionTitulo: 'Sicherheits-PIN',
-    pinSeccionDesc: 'Schütze deinen Bestand vor unbefugtem Zugriff',
-    bloquearBtn: 'Sperren',
-    cambiarPinLabel: 'PIN auf diesem Gerät ändern',
-    nuevoPinPlaceholder: 'Neuer PIN',
-    guardarPinBtn: 'Speichern',
-    pinActualLabel: 'Aktueller PIN auf diesem Gerät:',
-    pinActualizadoExito: 'PIN auf diesem Gerät erfolgreich aktualisiert.',
     pwaSeccionTitulo: 'PWA-Anwendung',
     pwaSeccionDesc: 'App auf deinem Startbildschirm für Sofortzugriff installieren',
     pwaDisponibilidadLabel: 'Verfügbarkeit auf mobilen Geräten',
@@ -292,14 +267,6 @@ export const translations: Record<LanguageCode, Translations> = {
     sincronizacionSeccionDesc: 'Daten mit deiner Google Sheets-Tabelle abgleichen',
     sincronizarBtn: 'Synchronisieren',
     sincronizadoExito: 'Bestand erfolgreich synchronisiert.',
-
-    pinModalTitulo: 'Sicherheit',
-    pinModalDesc: 'Gib deinen Zugangs-PIN ein, um den Bestand zu synchronisieren und zu bearbeiten.',
-    pinInputLabel: 'Zugangs-PIN',
-    pinInputPlaceholder: '••••',
-    desbloquearBtn: 'Entsperren und verbinden',
-    recordarDispositivo: 'Auf diesem Smartphone / Gerät merken',
-    errorPinVacio: 'Bitte gib deinen PIN-Code ein.',
 
     offlineAviso: 'Keine Internetverbindung — Änderungen können erst nach erneuter Verbindung gespeichert werden.',
     errorConexionTitulo: 'Verbindung zum Server fehlgeschlagen',
@@ -429,18 +396,10 @@ export const translations: Record<LanguageCode, Translations> = {
     errorCategoriaExiste: 'La categoría ya existe.',
     categoriaCreadaExito: 'Categoría creada correctamente.',
 
-    ajustesTitulo: 'Ajustes y Seguridad',
+    ajustesTitulo: 'Ajustes',
     ajustesSubtitulo: 'Configuración personal de Mi Freezer',
     idiomaSeccionTitulo: 'Idioma / Sprache',
     idiomaSeccionDesc: 'Selecciona el idioma de la aplicación',
-    pinSeccionTitulo: 'PIN de Seguridad',
-    pinSeccionDesc: 'Protege tu inventario contra accesos no deseados',
-    bloquearBtn: 'Bloquear',
-    cambiarPinLabel: 'Cambiar PIN en este celular',
-    nuevoPinPlaceholder: 'Nuevo PIN',
-    guardarPinBtn: 'Guardar',
-    pinActualLabel: 'PIN configurado actual:',
-    pinActualizadoExito: 'PIN actualizado correctamente en este dispositivo.',
     pwaSeccionTitulo: 'Aplicación PWA',
     pwaSeccionDesc: 'Instala la app en tu pantalla de inicio para acceso directo',
     pwaDisponibilidadLabel: 'Disponibilidad en celular',
@@ -448,14 +407,6 @@ export const translations: Record<LanguageCode, Translations> = {
     sincronizacionSeccionDesc: 'Mantener datos actualizados con tu planilla',
     sincronizarBtn: 'Sincronizar',
     sincronizadoExito: 'Inventario sincronizado con éxito.',
-
-    pinModalTitulo: 'Seguridad de Mi Freezer',
-    pinModalDesc: 'Ingresa tu PIN de acceso para sincronizar y modificar el inventario.',
-    pinInputLabel: 'PIN de Acceso',
-    pinInputPlaceholder: '••••',
-    desbloquearBtn: 'Desbloquear y Conectar',
-    recordarDispositivo: 'Recordar en este celular / dispositivo',
-    errorPinVacio: 'Por favor ingresa tu código PIN.',
 
     offlineAviso: 'Sin conexión a internet — No se pueden guardar cambios hasta reconectar.',
     errorConexionTitulo: 'No pudimos conectar con el servidor',

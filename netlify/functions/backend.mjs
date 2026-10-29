@@ -1,7 +1,7 @@
 /**
  * Netlify Function: backend.mjs
  * Secure server-side proxy between frontend and Google Apps Script Web App.
- * Injects FREEZER_API_KEY and protects endpoint with user PIN validation.
+ * Injects FREEZER_API_KEY on the server side without exposing it to the client.
  */
 
 const DEFAULT_GAS_URL =
@@ -15,50 +15,9 @@ export default async (request, context) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-user-pin, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       },
     });
-  }
-
-  const configuredUserPin = process.env.FREEZER_USER_PIN;
-
-  if (!configuredUserPin) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: 'Error de configuración del servidor: variable de autenticación requerida no configurada.',
-        code: 'CONFIG_ERROR',
-      }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
-  }
-
-  // Validate single-user security PIN
-  const clientPin =
-    request.headers.get('x-user-pin') ||
-    request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
-
-  if (!clientPin || clientPin !== configuredUserPin) {
-    return new Response(
-      JSON.stringify({
-        ok: false,
-        error: 'Acceso no autorizado: PIN de seguridad inválido o no suministrado.',
-        code: 'UNAUTHORIZED',
-      }),
-      {
-        status: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
   }
 
   const gasUrl = process.env.GAS_URL || DEFAULT_GAS_URL;
@@ -130,7 +89,6 @@ export default async (request, context) => {
     try {
       parsedData = JSON.parse(responseText);
     } catch {
-      // If Apps Script returned HTML error or non-JSON string
       parsedData = {
         ok: false,
         error: `Respuesta no válida del servidor: ${responseText.slice(0, 300)}`,

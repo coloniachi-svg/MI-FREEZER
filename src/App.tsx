@@ -8,7 +8,6 @@ import {
   History,
   Tags,
   Settings,
-  Lock,
   Loader2,
   AlertCircle,
   CheckCircle2,
@@ -38,7 +37,6 @@ import { AjustesView } from './components/AjustesView';
 import { MovimientoModal } from './components/MovimientoModal';
 import { NuevoProductoModal } from './components/NuevoProductoModal';
 import { EditarProductoModal } from './components/EditarProductoModal';
-import { PinModal } from './components/PinModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallButton } from './components/PWAInstallButton';
 import { LanguageSelector } from './components/LanguageSelector';
@@ -68,9 +66,6 @@ function MainFreezerApp() {
   const [loadingInitial, setLoadingInitial] = useState<boolean>(true);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
-
-  // Security Lock
-  const [isLocked, setIsLocked] = useState<boolean>(false);
 
   // Toast feedback
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -108,7 +103,6 @@ function MainFreezerApp() {
       setProductos(data.productos);
       setCategorias(data.categorias);
       setMovimientos(data.movimientos);
-      setIsLocked(false);
 
       // Check if language was stored in Google Sheets Configuracion sheet
       const langConfig =
@@ -120,15 +114,11 @@ function MainFreezerApp() {
         setLang(langConfig as LanguageCode);
       }
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      } else {
-        const errorMsg =
-          err?.message === 'OFFLINE_ERROR'
-            ? t.offlineAviso
-            : err?.message || t.errorConexionTitulo;
-        setGlobalError(errorMsg);
-      }
+      const errorMsg =
+        err?.message === 'OFFLINE_ERROR'
+          ? t.offlineAviso
+          : err?.message || t.errorConexionTitulo;
+      setGlobalError(errorMsg);
     } finally {
       if (!isSilent) {
         setLoadingInitial(false);
@@ -185,9 +175,6 @@ function MainFreezerApp() {
 
       showToast(msg, 'success');
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -237,9 +224,6 @@ function MainFreezerApp() {
 
       showToast(msg, 'success');
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -286,9 +270,6 @@ function MainFreezerApp() {
         'success'
       );
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -312,9 +293,6 @@ function MainFreezerApp() {
         'success'
       );
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -329,9 +307,6 @@ function MainFreezerApp() {
       setProductos((prev) => prev.filter((p) => p.ID !== productoId));
       showToast(t.toastProductoArchivadoExito, 'info');
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -356,9 +331,6 @@ function MainFreezerApp() {
         'success'
       );
     } catch (err: any) {
-      if (err?.code === 'UNAUTHORIZED') {
-        setIsLocked(true);
-      }
       throw err;
     } finally {
       setActionLoading(false);
@@ -392,14 +364,6 @@ function MainFreezerApp() {
             <LanguageSelector />
 
             <PWAInstallButton />
-
-            <button
-              onClick={() => setIsLocked(true)}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-              title={t.bloquearBtn}
-            >
-              <Lock className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
@@ -486,7 +450,6 @@ function MainFreezerApp() {
             {activeTab === 'ajustes' && (
               <AjustesView
                 onRefreshAll={() => cargarDatos(false)}
-                onLockApp={() => setIsLocked(true)}
               />
             )}
           </>
@@ -574,15 +537,6 @@ function MainFreezerApp() {
         onEditar={handleEditarProducto}
         onAjustarSaldo={handleAjusteSaldo}
         onArchivar={handleArchivarProducto}
-      />
-
-      {/* Security PIN Lock Modal */}
-      <PinModal
-        isOpen={isLocked}
-        onSuccess={() => {
-          setIsLocked(false);
-          cargarDatos();
-        }}
       />
 
       {/* Floating Toast Notifications */}

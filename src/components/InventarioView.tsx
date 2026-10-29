@@ -8,7 +8,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { Categoria, Producto } from '../types/freezer';
-import { getCategoryEmoji } from '../utils/formatters';
+import { getCategoryEmoji, getProductEmoji } from '../utils/formatters';
 import { useLanguage } from '../i18n/LanguageContext';
 
 interface InventarioViewProps {
@@ -36,7 +36,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
   onRefresh,
   loading,
 }) => {
-  const { t, formatUnidadLocale, translateCategory } = useLanguage();
+  const { t, formatUnidadLocale, translateCategory, isSameCategory } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [soloStockBajo, setSoloStockBajo] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -50,7 +50,12 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
     }
   };
 
-  // Filter products safely
+  // Compute total counts based ONLY on items with Saldo > 0
+  const totalEnStock = useMemo(() => {
+    return productos.filter((p) => p.Saldo > 0).length;
+  }, [productos]);
+
+  // Filter products by search term, category, and low-stock filter
   const filteredProductos = useMemo(() => {
     return productos.filter((p) => {
       const pNombre = (p.Producto || '').toLowerCase();
@@ -61,79 +66,30 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
 
       let matchCat = true;
       if (categoriaSeleccionada) {
-        const selLower = categoriaSeleccionada.toLowerCase().trim();
-        const catTranslated = translateCategory(p.Categoria).toLowerCase().trim();
-        matchCat = pCat === selLower || catTranslated === selLower;
+        matchCat = isSameCategory(p.Categoria, categoriaSeleccionada);
       }
 
       const isBajo = p.Saldo <= p.Minimo;
       const matchStockBajo = !soloStockBajo || isBajo;
 
       return matchSearch && matchCat && matchStockBajo;
+    }).sort((a, b) => {
+      // 1. Saldo > 0 first, Saldo === 0 last
+      const aInStock = a.Saldo > 0 ? 1 : 0;
+      const bInStock = b.Saldo > 0 ? 1 : 0;
+      if (aInStock !== bInStock) {
+        return bInStock - aInStock;
+      }
+      // 2. Alphabetical secondary sort
+      return (a.Producto || '').localeCompare(b.Producto || '');
     });
-  }, [productos, searchTerm, categoriaSeleccionada, soloStockBajo, translateCategory]);
-
-  const totalProductos = productos.length;
-  const stockBajoCount = productos.filter((p) => p.Saldo <= p.Minimo).length;
+  }, [productos, searchTerm, categoriaSeleccionada, soloStockBajo, isSameCategory]);
 
   return (
     <div className="space-y-4 pb-24">
-      {/* Top summary stats */}
-      <div className="grid grid-cols-2 gap-2.5">
-        <div className="p-3 rounded-2xl bg-white border border-sky-100 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-              {t.totalAlimentos}
-            </p>
-            <p className="text-xl font-extrabold text-slate-900 mt-0.5">
-              {totalProductos}
-            </p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold text-lg">
-            ❄️
-          </div>
-        </div>
 
-        <div
-          onClick={() => setSoloStockBajo(!soloStockBajo)}
-          className={`p-3 rounded-2xl border transition shadow-xs cursor-pointer flex items-center justify-between ${
-            soloStockBajo
-              ? 'bg-amber-500 text-white border-amber-600 shadow-amber-200'
-              : stockBajoCount > 0
-              ? 'bg-amber-50/80 border-amber-200 text-amber-900'
-              : 'bg-white border-slate-200 text-slate-800'
-          }`}
-        >
-          <div>
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-wider ${
-                soloStockBajo ? 'text-amber-100' : 'text-amber-700'
-              }`}
-            >
-              {t.stockBajo}
-            </p>
-            <p
-              className={`text-xl font-extrabold mt-0.5 ${
-                soloStockBajo ? 'text-white' : 'text-amber-800'
-              }`}
-            >
-              {stockBajoCount}
-            </p>
-          </div>
-          <div
-            className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              soloStockBajo
-                ? 'bg-white/20 text-white'
-                : 'bg-amber-100 text-amber-600'
-            }`}
-          >
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Actions Bar */}
-      <div className="space-y-2.5">
+      {/* Search & Action Bar + Categories Grid */}
+      <div className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
@@ -142,7 +98,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t.buscarPlaceholder}
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
+              className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 outline-none text-slate-800 transition"
             />
             {searchTerm && (
               <button
@@ -157,7 +113,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
           <button
             onClick={handleRefresh}
             disabled={loading || refreshing}
-            className="p-2.5 rounded-xl text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-100 transition active:scale-95 disabled:opacity-50 shrink-0"
+            className="p-2.5 rounded-xl text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-100 transition active:scale-95 disabled:opacity-50 shrink-0 cursor-pointer"
             title={t.sincronizar}
           >
             <RefreshCw
@@ -167,7 +123,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
 
           <button
             onClick={onOpenNuevoModal}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95 shrink-0"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95 shrink-0 cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span className="hidden sm:inline">{t.nuevoProducto}</span>
@@ -175,56 +131,85 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
           </button>
         </div>
 
-        {/* Category horizontal scroll pills */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar items-center">
+        {/* Category Adaptive Grid (2 cols mobile, 3-4 cols desktop, multi-row, NO horizontal scroll) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          {/* "Alle / Todos" Button */}
           <button
+            type="button"
             onClick={() => onSelectCategoria(null)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border ${
+            className={`p-2.5 rounded-2xl text-xs font-semibold transition border flex items-center justify-between gap-1.5 text-left active:scale-[0.98] cursor-pointer ${
               !categoriaSeleccionada
                 ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
             }`}
           >
-            {t.todos} ({productos.length})
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-base shrink-0">❄️</span>
+              <span className="truncate font-bold">{t.todos}</span>
+            </div>
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono shrink-0 font-bold ${
+                !categoriaSeleccionada
+                  ? 'bg-sky-700/80 text-white'
+                  : 'bg-sky-50 text-sky-700'
+              }`}
+            >
+              {totalEnStock}
+            </span>
           </button>
 
+          {/* Individual Category Cards */}
           {categorias.map((cat) => {
             const rawCatNombre = cat.nombre || '';
             const visualNombre = translateCategory(rawCatNombre);
-            const isSelected =
-              categoriaSeleccionada?.toLowerCase().trim() ===
-              rawCatNombre.toLowerCase().trim();
+            const isSelected = categoriaSeleccionada
+              ? isSameCategory(categoriaSeleccionada, rawCatNombre)
+              : false;
 
-            const count = productos.filter((p) => {
-              const pCat = (p.Categoria || '').toLowerCase().trim();
-              return (
-                pCat === rawCatNombre.toLowerCase().trim() ||
-                pCat === visualNombre.toLowerCase().trim()
-              );
+            // Count ONLY products with Saldo > 0
+            const countInStock = productos.filter((p) => {
+              return isSameCategory(p.Categoria, rawCatNombre) && p.Saldo > 0;
             }).length;
 
             return (
               <button
                 key={cat.id || rawCatNombre}
+                type="button"
                 onClick={() =>
                   onSelectCategoria(isSelected ? null : rawCatNombre)
                 }
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition border flex items-center gap-1.5 ${
+                className={`p-2.5 rounded-2xl text-xs font-semibold transition border flex items-center justify-between gap-1.5 text-left active:scale-[0.98] cursor-pointer ${
                   isSelected
-                    ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    ? 'bg-sky-600 text-white border-sky-600 shadow-xs ring-2 ring-sky-300/60'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
                 }`}
               >
-                <span>{getCategoryEmoji(rawCatNombre)}</span>
-                <span>{visualNombre}</span>
-                <span className="opacity-75 text-[10px]">({count})</span>
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  <span className="text-base shrink-0">
+                    {getCategoryEmoji(cat, categorias)}
+                  </span>
+                  <span className="break-words leading-tight text-xs font-semibold min-w-0">
+                    {visualNombre}
+                  </span>
+                </div>
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono shrink-0 font-bold ${
+                    isSelected
+                      ? 'bg-sky-700/80 text-white'
+                      : countInStock > 0
+                      ? 'bg-sky-50 text-sky-700'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {countInStock}
+                </span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Main product list */}
+      {/* Main Product List */}
       {filteredProductos.length === 0 ? (
         <div className="text-center py-14 px-4 rounded-3xl bg-white border border-slate-200/80 shadow-xs">
           {productos.length === 0 ? (
@@ -240,7 +225,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
               </p>
               <button
                 onClick={onOpenNuevoModal}
-                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95"
+                className="mt-2 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-semibold text-xs transition shadow-sm active:scale-95 cursor-pointer"
               >
                 <Plus className="w-4 h-4 stroke-[2.5]" />
                 <span>{t.nuevoProducto}</span>
@@ -261,7 +246,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                   onSelectCategoria(null);
                   setSoloStockBajo(false);
                 }}
-                className="text-xs font-semibold text-sky-600 hover:underline pt-1"
+                className="text-xs font-semibold text-sky-600 hover:underline pt-1 cursor-pointer"
               >
                 {t.limpiarFiltros}
               </button>
@@ -274,6 +259,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
             const isAgotado = prod.Saldo <= 0;
             const isBajo = prod.Saldo <= prod.Minimo && !isAgotado;
             const catVisual = translateCategory(prod.Categoria);
+            const catObj = categorias.find((c) => isSameCategory(c.nombre, prod.Categoria));
 
             return (
               <div
@@ -292,7 +278,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                   className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
                 >
                   <div className="text-2xl p-2.5 rounded-xl bg-sky-50/60 border border-sky-100 group-hover:scale-105 transition shrink-0">
-                    {getCategoryEmoji(prod.Categoria)}
+                    {getProductEmoji(prod.Producto, catObj || prod.Categoria, prod.Emoji, categorias)}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -325,7 +311,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Quick action buttons [-] and [+] (optimized for mobile touch) */}
+                {/* Right: Quick action buttons [-] and [+] */}
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={(e) => {
@@ -333,7 +319,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                       onOpenRetirarModal(prod);
                     }}
                     disabled={prod.Saldo <= 0}
-                    className="w-11 h-11 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 active:scale-95 text-amber-700 border border-amber-200 flex items-center justify-center font-bold transition disabled:opacity-30 disabled:pointer-events-none shadow-xs"
+                    className="w-11 h-11 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 active:scale-95 text-amber-700 border border-amber-200 flex items-center justify-center font-bold transition disabled:opacity-30 disabled:pointer-events-none shadow-xs cursor-pointer"
                     aria-label={`${t.retirarProducto} ${prod.Producto}`}
                     title={t.retirarProducto}
                   >
@@ -345,7 +331,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                       e.stopPropagation();
                       onOpenAgregarModal(prod);
                     }}
-                    className="w-11 h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 active:scale-95 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold transition shadow-xs"
+                    className="w-11 h-11 rounded-xl bg-emerald-50 hover:bg-emerald-100 active:bg-emerald-200 active:scale-95 text-emerald-700 border border-emerald-200 flex items-center justify-center font-bold transition shadow-xs cursor-pointer"
                     aria-label={`${t.agregarProducto} ${prod.Producto}`}
                     title={t.agregarProducto}
                   >

@@ -6,6 +6,7 @@ import {
   translateCategoryName,
   translateMovementType,
   translateUnitName,
+  isSameCategory,
 } from './translations';
 import {
   formatCantidad,
@@ -18,6 +19,7 @@ interface LanguageContextType {
   setLang: (lang: LanguageCode) => void;
   t: Translations;
   translateCategory: (catName: string | any) => string;
+  isSameCategory: (catA: string | any, catB: string | any) => boolean;
   translateMovement: (tipo: TipoMovimiento | string) => string;
   translateUnit: (unidad: string, cantidad: number) => string;
   formatDateLocale: (dateStr: string | Date | undefined, includeTime?: boolean) => string;
@@ -86,6 +88,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
         setLang,
         t,
         translateCategory,
+        isSameCategory,
         translateMovement,
         translateUnit,
         formatDateLocale,

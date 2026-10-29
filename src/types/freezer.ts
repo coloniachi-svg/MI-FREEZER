@@ -15,6 +15,8 @@ export interface Producto {
   Unidad: UnidadMedida | string;
   Saldo: number;
   Minimo: number;
+  Emoji?: string;
+  emoji?: string;
   Estado?: string; // 'ACTIVO' | 'ARCHIVADO'
   FechaCreacion?: string;
   FechaActualizacion?: string;
@@ -35,6 +37,8 @@ export interface Movimiento {
 export interface Categoria {
   id: string | number;
   nombre: string;
+  Emoji?: string;
+  emoji?: string;
   // Aliases for compatibility
   ID?: string | number;
   Categoria?: string;
@@ -65,6 +69,7 @@ export interface CrearProductoDTO {
   unidad: UnidadMedida;
   saldo: number;
   minimo: number;
+  emoji?: string;
 }
 
 export interface EditarProductoDTO {
@@ -72,6 +77,13 @@ export interface EditarProductoDTO {
   producto: string;
   categoria: string;
   minimo: number;
+  emoji?: string;
+}
+
+export interface EditarCategoriaDTO {
+  id: string | number;
+  nombre: string;
+  emoji?: string;
 }
 
 export interface RegistrarMovimientoDTO {

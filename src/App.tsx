@@ -25,7 +25,9 @@ import {
   archivarProducto,
   crearCategoria,
   crearProducto,
+  editarCategoria,
   editarProducto,
+  eliminarCategoria,
   getDatosIniciales,
   guardarConfiguracion,
   registrarMovimiento,
@@ -39,8 +41,10 @@ import { NuevoProductoModal } from './components/NuevoProductoModal';
 import { EditarProductoModal } from './components/EditarProductoModal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { PWAInstallButton } from './components/PWAInstallButton';
+import { PWAUpdateNotification } from './components/PWAUpdateNotification';
 import { LanguageSelector } from './components/LanguageSelector';
 import { LanguageProvider, useLanguage } from './i18n/LanguageContext';
+import { isSameCategory } from './i18n/translations';
 
 type TabView = 'inventario' | 'movimientos' | 'categorias' | 'ajustes';
 
@@ -236,13 +240,22 @@ function MainFreezerApp() {
     try {
       const res = await crearProducto(dto);
 
+      const realId =
+        (res as any)?.resultado?.id ||
+        (res as any)?.resultado?.ID ||
+        (res as any)?.id ||
+        (res as any)?.ID ||
+        Date.now();
+
       const nuevoProd: Producto = {
-        ID: (res as any)?.id || (res as any)?.ID || Date.now(),
+        ID: realId,
         Producto: dto.producto,
         Categoria: dto.categoria,
         Unidad: dto.unidad,
         Saldo: dto.saldo,
         Minimo: dto.minimo,
+        Emoji: dto.emoji,
+        emoji: dto.emoji,
         Estado: 'ACTIVO',
       };
 
@@ -284,7 +297,14 @@ function MainFreezerApp() {
       setProductos((prev) =>
         prev.map((p) =>
           p.ID === dto.id
-            ? { ...p, Producto: dto.producto, Categoria: dto.categoria, Minimo: dto.minimo }
+            ? {
+                ...p,
+                Producto: dto.producto,
+                Categoria: dto.categoria,
+                Minimo: dto.minimo,
+                Emoji: dto.emoji,
+                emoji: dto.emoji,
+              }
             : p
         )
       );
@@ -299,7 +319,7 @@ function MainFreezerApp() {
     }
   };
 
-  // Handle Archivar Producto
+  // Handle Archivar / Eliminar Producto
   const handleArchivarProducto = async (productoId: string | number) => {
     setActionLoading(true);
     try {
@@ -314,15 +334,24 @@ function MainFreezerApp() {
   };
 
   // Handle Crear Categoría
-  const handleCrearCategoria = async (nombreCat: string) => {
+  const handleCrearCategoria = async (nombreCat: string, emoji?: string) => {
     setActionLoading(true);
     try {
-      const res = await crearCategoria(nombreCat);
+      const res = await crearCategoria(nombreCat, emoji);
       const cleanNombre = nombreCat.trim();
+      const realId =
+        (res as any)?.resultado?.id ||
+        (res as any)?.resultado?.ID ||
+        (res as any)?.id ||
+        (res as any)?.ID ||
+        cleanNombre;
+
       const nueva: Categoria = {
-        id: (res as any)?.id || cleanNombre,
+        id: realId,
         nombre: cleanNombre,
-        ID: (res as any)?.id || cleanNombre,
+        Emoji: emoji || '',
+        emoji: emoji || '',
+        ID: realId,
         Categoria: cleanNombre,
       };
       setCategorias((prev) => [...prev, nueva]);
@@ -330,6 +359,105 @@ function MainFreezerApp() {
         t.toastCategoriaCreadaExito.replace('{categoria}', cleanNombre),
         'success'
       );
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Editar Categoría
+  const handleEditarCategoria = async (
+    catId: string | number,
+    nuevoNombre: string,
+    nuevoEmoji: string
+  ) => {
+    setActionLoading(true);
+    try {
+      const oldCat = categorias.find((c) => c.id === catId || isSameCategory(c.nombre, catId));
+      const oldNombre = oldCat ? oldCat.nombre : String(catId);
+      const targetId = oldCat ? oldCat.id : catId;
+
+      await editarCategoria({
+        id: targetId,
+        nombre: nuevoNombre,
+        nombreAnterior: oldNombre,
+        emoji: nuevoEmoji,
+      });
+
+      setCategorias((prev) =>
+        prev.map((c) =>
+          c.id === targetId || isSameCategory(c.nombre, oldNombre)
+            ? { ...c, id: targetId, ID: targetId, nombre: nuevoNombre, Categoria: nuevoNombre, Emoji: nuevoEmoji, emoji: nuevoEmoji }
+            : c
+        )
+      );
+
+      // If category name was renamed, update active products matching old category
+      if (oldNombre && oldNombre.trim().toLowerCase() !== nuevoNombre.trim().toLowerCase()) {
+        const affected = productos.filter((p) => isSameCategory(p.Categoria, oldNombre));
+        setProductos((prev) =>
+          prev.map((p) =>
+            isSameCategory(p.Categoria, oldNombre)
+              ? { ...p, Categoria: nuevoNombre }
+              : p
+          )
+        );
+        for (const prod of affected) {
+          editarProducto({
+            id: prod.ID,
+            producto: prod.Producto,
+            categoria: nuevoNombre,
+            minimo: prod.Minimo,
+            emoji: prod.Emoji,
+          }).catch((err) => console.error('Error auto-updating product category:', err));
+        }
+      }
+
+      showToast('Categoría actualizada con éxito.', 'success');
+    } catch (err: any) {
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Handle Eliminar Categoría
+  const handleEliminarCategoria = async (
+    catId: string | number,
+    catNombre: string,
+    targetCatNombre?: string
+  ) => {
+    setActionLoading(true);
+    try {
+      if (targetCatNombre) {
+        const affected = productos.filter((p) => p.Categoria.trim().toLowerCase() === catNombre.trim().toLowerCase());
+        setProductos((prev) =>
+          prev.map((p) =>
+            p.Categoria.trim().toLowerCase() === catNombre.trim().toLowerCase()
+              ? { ...p, Categoria: targetCatNombre }
+              : p
+          )
+        );
+        for (const prod of affected) {
+          await editarProducto({
+            id: prod.ID,
+            producto: prod.Producto,
+            categoria: targetCatNombre,
+            minimo: prod.Minimo,
+            emoji: prod.Emoji,
+          });
+        }
+      }
+
+      await eliminarCategoria(catId);
+      setCategorias((prev) => prev.filter((c) => c.id !== catId));
+
+      if (selectedCategoria && selectedCategoria.trim().toLowerCase() === catNombre.trim().toLowerCase()) {
+        setSelectedCategoria(null);
+      }
+
+      showToast('Categoría eliminada con éxito.', 'info');
     } catch (err: any) {
       throw err;
     } finally {
@@ -367,6 +495,9 @@ function MainFreezerApp() {
           </div>
         </div>
       </header>
+
+      {/* PWA Update Notification Banner */}
+      <PWAUpdateNotification />
 
       {/* Main Body */}
       <main className="flex-1 max-w-xl w-full mx-auto px-4 pt-4 pb-20">
@@ -440,6 +571,8 @@ function MainFreezerApp() {
                 categorias={categorias}
                 productos={productos}
                 onCrearCategoria={handleCrearCategoria}
+                onEditarCategoria={handleEditarCategoria}
+                onEliminarCategoria={handleEliminarCategoria}
                 onSelectCategoria={(catName) => {
                   setSelectedCategoria(catName);
                   setActiveTab('inventario');

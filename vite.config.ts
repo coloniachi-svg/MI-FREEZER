@@ -14,8 +14,8 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Mi Freezer - Inventario',
-          short_name: 'Mi Freezer',
+          name: 'Mein Gefrierschrank / Mi Freezer',
+          short_name: 'Freezer',
           description: 'Control de inventario inteligente y rápido para tu freezer con Google Sheets.',
           theme_color: '#0284c7',
           background_color: '#ffffff',
@@ -44,6 +44,7 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          cleanupOutdatedCaches: true,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           navigateFallbackDenylist: [/^\/api\//],
           runtimeCaching: [

@@ -20,6 +20,35 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
   const { t, lang, setLang } = useLanguage();
   const [msg, setMsg] = useState<{ text: string; isError: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  const handleCheckUpdate = async () => {
+    if (!('serviceWorker' in navigator)) {
+      setMsg({ text: t.sinActualizacionesMsg, isError: false });
+      setTimeout(() => setMsg(null), 3000);
+      return;
+    }
+    setCheckingUpdate(true);
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          setMsg({ text: t.pwaUpdateTitulo, isError: false });
+        } else {
+          setMsg({ text: t.sinActualizacionesMsg, isError: false });
+        }
+      } else {
+        setMsg({ text: t.sinActualizacionesMsg, isError: false });
+      }
+      setTimeout(() => setMsg(null), 4000);
+    } catch {
+      setMsg({ text: t.sinActualizacionesMsg, isError: false });
+      setTimeout(() => setMsg(null), 4000);
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   const handleManualSync = async () => {
     setRefreshing(true);
@@ -124,6 +153,19 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
         <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
           <span className="text-xs text-slate-600">{t.pwaDisponibilidadLabel}</span>
           <PWAInstallButton />
+        </div>
+
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <span className="text-xs text-slate-600">PWA Updates</span>
+          <button
+            type="button"
+            onClick={handleCheckUpdate}
+            disabled={checkingUpdate}
+            className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-xs flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${checkingUpdate ? 'animate-spin' : ''}`} />
+            <span>{checkingUpdate ? t.comprobandoActualizacion : t.buscarActualizacionBtn}</span>
+          </button>
         </div>
       </div>
 

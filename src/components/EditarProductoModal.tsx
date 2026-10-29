@@ -8,10 +8,12 @@ import {
   Sliders,
   Edit3,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { Categoria, EditarProductoDTO, Producto } from '../types/freezer';
-import { parseDecimalInput } from '../utils/formatters';
+import { parseDecimalInput, getCategoryEmoji } from '../utils/formatters';
 import { useLanguage } from '../i18n/LanguageContext';
+import { EmojiSelector } from './EmojiSelector';
 
 interface EditarProductoModalProps {
   isOpen: boolean;
@@ -32,12 +34,13 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
   onAjustarSaldo,
   onArchivar,
 }) => {
-  const { t, formatUnidadLocale, translateCategory } = useLanguage();
+  const { t, formatUnidadLocale, translateCategory, lang } = useLanguage();
 
   if (!isOpen || !producto) return null;
 
   const [nombre, setNombre] = useState(producto.Producto);
   const [categoria, setCategoria] = useState(producto.Categoria);
+  const [emoji, setEmoji] = useState(producto.Emoji || producto.emoji || '');
   const [minimoStr, setMinimoStr] = useState(producto.Minimo.toString().replace('.', ','));
   const [nuevoSaldoStr, setNuevoSaldoStr] = useState(
     producto.Saldo.toString().replace('.', ',')
@@ -70,6 +73,7 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
         producto: nombreLimpio,
         categoria: categoria.trim(),
         minimo,
+        emoji: emoji.trim(),
       });
       onClose();
     } catch (err: any) {
@@ -124,8 +128,9 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100">
           <div>
-            <span className="text-[11px] font-semibold tracking-wider uppercase text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100">
-              {translateCategory(producto.Categoria)}
+            <span className="text-[11px] font-semibold tracking-wider uppercase text-sky-600 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-100 flex items-center gap-1 w-fit">
+              <span>{getCategoryEmoji(producto.Categoria, categorias)}</span>
+              <span>{translateCategory(producto.Categoria)}</span>
             </span>
             <h3 className="font-bold text-slate-900 text-base leading-tight mt-1">
               {producto.Producto}
@@ -181,8 +186,8 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
                 : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
           >
-            <Archive className="w-3.5 h-3.5" />
-            <span>{t.tabArchivar}</span>
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>{lang === 'de' ? 'Produkt entfernen' : 'Eliminar producto'}</span>
           </button>
         </div>
 
@@ -209,6 +214,13 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
               />
             </div>
 
+            <EmojiSelector
+              value={emoji}
+              onChange={setEmoji}
+              defaultEmojiSuggestion="Auto 🥩/🥖/🥦"
+              label="Emoji personalizado"
+            />
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 {t.categoriaLabel}
@@ -221,7 +233,7 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
               >
                 {categorias.map((c) => (
                   <option key={c.id || c.nombre} value={c.nombre}>
-                    {translateCategory(c.nombre)}
+                    {getCategoryEmoji(c, categorias)} {translateCategory(c.nombre)}
                   </option>
                 ))}
               </select>
@@ -352,15 +364,19 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
           </form>
         )}
 
-        {/* Tab 3: Archivar */}
+        {/* Tab 3: Eliminar / Archivar */}
         {activeTab === 'archivar' && (
           <div className="mt-4 space-y-4">
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
-                <p className="font-bold">{t.confirmarArchivarTitulo}</p>
+                <p className="font-bold">
+                  {lang === 'de' ? 'Möchtest du das Produkt entfernen?' : '¿Deseas eliminar el producto del inventario?'}
+                </p>
                 <p className="text-rose-700 leading-relaxed">
-                  {t.confirmarArchivarDesc}
+                  {lang === 'de'
+                    ? 'Das Produkt wird aus der aktiven Liste des Gefrierschranks und den Suchen entfernt. Der Buchungsverlauf in Google Sheets bleibt erhalten und du kannst das Produkt später jederzeit neu registrieren.'
+                    : 'El producto se retirará de tu inventario activo y de las búsquedas. Su historial de entradas y salidas se conservará intacto en Google Sheets y podrás volver a registrarlo si lo deseas.'}
                 </p>
               </div>
             </div>
@@ -370,7 +386,7 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
                 type="button"
                 onClick={onClose}
                 disabled={loading}
-                className="w-1/2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition"
+                className="w-1/2 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold text-sm transition cursor-pointer"
               >
                 {t.cancelar}
               </button>
@@ -378,7 +394,7 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
                 type="button"
                 onClick={handleConfirmarArchivar}
                 disabled={loading}
-                className="w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm transition shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm transition shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
@@ -387,8 +403,8 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
                   </>
                 ) : (
                   <>
-                    <Archive className="w-4 h-4" />
-                    <span>{t.siArchivarBtn}</span>
+                    <Trash2 className="w-4 h-4" />
+                    <span>{lang === 'de' ? 'Produkt entfernen' : 'Eliminar producto'}</span>
                   </>
                 )}
               </button>

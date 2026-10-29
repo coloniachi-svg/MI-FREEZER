@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Plus, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Categoria, CrearProductoDTO, Producto, UnidadMedida } from '../types/freezer';
-import { parseDecimalInput } from '../utils/formatters';
+import { parseDecimalInput, getCategoryEmoji } from '../utils/formatters';
 import { useLanguage } from '../i18n/LanguageContext';
+import { EmojiSelector } from './EmojiSelector';
 
 interface NuevoProductoModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
   const [unidad, setUnidad] = useState<UnidadMedida>('kg');
   const [saldoStr, setSaldoStr] = useState('1');
   const [minimoStr, setMinimoStr] = useState('1');
+  const [emoji, setEmoji] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -112,6 +114,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
         unidad,
         saldo,
         minimo,
+        emoji: emoji.trim(),
       });
 
       onClose();
@@ -173,6 +176,14 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
             />
           </div>
 
+          {/* Emoji Personalizado */}
+          <EmojiSelector
+            value={emoji}
+            onChange={setEmoji}
+            defaultEmojiSuggestion="Auto 🥩/🥖/🥦"
+            label="Emoji del producto (Opcional)"
+          />
+
           {/* Categoría */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -208,7 +219,7 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
               >
                 {categorias.map((c) => (
                   <option key={c.id || c.nombre} value={c.nombre}>
-                    {translateCategory(c.nombre)}
+                    {getCategoryEmoji(c, categorias)} {translateCategory(c.nombre)}
                   </option>
                 ))}
                 {categorias.length === 0 && (

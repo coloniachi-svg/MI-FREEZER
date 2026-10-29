@@ -27,6 +27,8 @@ function normalizeProducto(item: any): Producto {
       ? catRaw?.nombre || catRaw?.Categoria || 'Otros'
       : String(catRaw || 'Otros');
 
+  const rawEmoji = item?.Emoji || item?.emoji || '';
+
   return {
     ID: item?.ID || item?.id || '',
     Producto: item?.Producto || item?.producto || item?.nombre || '',
@@ -34,6 +36,8 @@ function normalizeProducto(item: any): Producto {
     Unidad: item?.Unidad || item?.unidad || 'unidad',
     Saldo: parseDecimalInput(item?.Saldo ?? item?.saldo ?? 0),
     Minimo: parseDecimalInput(item?.Minimo ?? item?.minimo ?? 0),
+    Emoji: rawEmoji,
+    emoji: rawEmoji,
     Estado: item?.Estado || item?.estado || 'ACTIVO',
     FechaCreacion: item?.FechaCreacion || item?.fechaCreacion || '',
     FechaActualizacion: item?.FechaActualizacion || item?.fechaActualizacion || '',
@@ -67,6 +71,8 @@ function normalizeCategoria(item: any): Categoria {
     return {
       id: s,
       nombre: s,
+      Emoji: '',
+      emoji: '',
       ID: s,
       Categoria: s,
     };
@@ -87,10 +93,13 @@ function normalizeCategoria(item: any): Categoria {
 
   const rawId = item?.id ?? item?.ID ?? item?.Id ?? cleanNombre;
   const cleanId = String(rawId || cleanNombre);
+  const rawEmoji = item?.Emoji ?? item?.emoji ?? '';
 
   return {
     id: cleanId,
     nombre: cleanNombre,
+    Emoji: rawEmoji,
+    emoji: rawEmoji,
     ID: cleanId,
     Categoria: cleanNombre,
   };
@@ -246,7 +255,6 @@ export async function getMovimientos(): Promise<Movimiento[]> {
 
 /**
  * Crear un nuevo producto en Google Sheets.
- * Envía tanto `nombre` como `producto`, y `saldoInicial` para garantizar la compatibilidad con Apps Script.
  */
 export async function crearProducto(dto: CrearProductoDTO): Promise<BackendResponse> {
   const nombreLimpio = dto.producto.trim();
@@ -260,36 +268,40 @@ export async function crearProducto(dto: CrearProductoDTO): Promise<BackendRespo
     saldo: dto.saldo,
     minimo: dto.minimo,
     stockMinimo: dto.minimo,
+    emoji: dto.emoji || '',
   });
   return res;
 }
 
 /**
- * Editar un producto existente (nombre, categoría, cantidad mínima).
- * No modifica directamente el saldo.
+ * Editar un producto existente (nombre, categoría, cantidad mínima, emoji).
  */
 export async function editarProducto(dto: EditarProductoDTO): Promise<BackendResponse> {
+  const idStr = String(dto.id);
   const nombreLimpio = dto.producto.trim();
   const res = await requestApi<any>('POST', undefined, {
     action: 'editarProducto',
-    id: dto.id,
+    id: idStr,
+    productoId: idStr,
     nombre: nombreLimpio,
     producto: nombreLimpio,
     categoria: dto.categoria.trim(),
     minimo: dto.minimo,
     stockMinimo: dto.minimo,
+    emoji: dto.emoji || '',
   });
   return res;
 }
 
 /**
  * Registrar un movimiento (ENTRADA, SALIDA o AJUSTE)
- * En AJUSTE, cantidad representa el nuevo saldo total.
  */
 export async function registrarMovimiento(dto: RegistrarMovimientoDTO): Promise<BackendResponse> {
+  const idStr = String(dto.productoId);
   const res = await requestApi<any>('POST', undefined, {
     action: 'movimiento',
-    productoId: dto.productoId,
+    productoId: idStr,
+    id: idStr,
     tipo: dto.tipo,
     cantidad: dto.cantidad,
     observacion: dto.observacion?.trim() || '',
@@ -298,26 +310,71 @@ export async function registrarMovimiento(dto: RegistrarMovimientoDTO): Promise<
 }
 
 /**
- * Archivar un producto en Google Sheets (cambio de estado sin eliminar físicamente)
+ * Archivar un producto en Google Sheets (cambio de estado a 'ARCHIVADO')
  */
 export async function archivarProducto(id: string | number): Promise<BackendResponse> {
+  const idStr = String(id);
   const res = await requestApi<any>('POST', undefined, {
     action: 'archivarProducto',
-    id: id,
+    id: idStr,
+    productoId: idStr,
   });
   return res;
 }
 
 /**
  * Crear una nueva categoría en Google Sheets.
- * Envía `nombre` (esperado por Google Apps Script) y `categoria` para compatibilidad completa.
  */
-export async function crearCategoria(nombreCategoria: string): Promise<BackendResponse> {
+export async function crearCategoria(nombreCategoria: string, emoji?: string): Promise<BackendResponse> {
   const nombreLimpio = nombreCategoria.trim();
   const res = await requestApi<any>('POST', undefined, {
     action: 'crearCategoria',
     nombre: nombreLimpio,
     categoria: nombreLimpio,
+    emoji: emoji || '',
+  });
+  return res;
+}
+
+/**
+ * Editar una categoría existente en Google Sheets.
+ */
+export async function editarCategoria(dto: {
+  id: string | number;
+  nombre: string;
+  nombreAnterior?: string;
+  emoji?: string;
+}): Promise<BackendResponse> {
+  const idStr = String(dto.id);
+  const nombreLimpio = dto.nombre.trim();
+  const nombreAnt = (dto.nombreAnterior || idStr).trim();
+
+  const res = await requestApi<any>('POST', undefined, {
+    action: 'editarCategoria',
+    id: idStr,
+    categoriaId: idStr,
+    idCategoria: idStr,
+    nombre: nombreLimpio,
+    categoria: nombreLimpio,
+    nombreNuevo: nombreLimpio,
+    nombreAnterior: nombreAnt,
+    categoriaAnterior: nombreAnt,
+    nombreOriginal: nombreAnt,
+    oldNombre: nombreAnt,
+    emoji: dto.emoji || '',
+  });
+  return res;
+}
+
+/**
+ * Eliminar una categoría en Google Sheets.
+ */
+export async function eliminarCategoria(id: string | number): Promise<BackendResponse> {
+  const idStr = String(id);
+  const res = await requestApi<any>('POST', undefined, {
+    action: 'eliminarCategoria',
+    id: idStr,
+    categoriaId: idStr,
   });
   return res;
 }

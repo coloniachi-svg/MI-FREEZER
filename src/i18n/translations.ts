@@ -142,6 +142,19 @@ export interface Translations {
   iosListoDesc: string;
   entendidoBtn: string;
 
+  // PWA Update Notification
+  pwaUpdateTitulo: string;
+  pwaUpdateDesc: string;
+  pwaUpdateBtn: string;
+  pwaUpdateActualizando: string;
+  buscarActualizacionBtn: string;
+  comprobandoActualizacion: string;
+  sinActualizacionesMsg: string;
+
+  // Inventory stock filters
+  filtroAufLager: string;
+  filtroTodosProductos: string;
+
   // Toast templates
   toastRetiradoExito: string;
   toastAgregadoExito: string;
@@ -164,7 +177,7 @@ export const translations: Record<LanguageCode, Translations> = {
 
     totalAlimentos: 'Lebensmittel gesamt',
     stockBajo: 'Knapper Bestand',
-    agotado: 'Ausverkauft',
+    agotado: 'Aufgebraucht',
     bajoStockBadge: 'Niedrig',
     buscarPlaceholder: 'Hähnchenbrust, Brot, Fleisch suchen...',
     sincronizar: 'Mit Google Sheets synchronisieren',
@@ -284,6 +297,17 @@ export const translations: Record<LanguageCode, Translations> = {
     iosListoDesc: 'Fertig! Du kannst Mein Gefrierschrank wie eine native App im Vollbildmodus nutzen.',
     entendidoBtn: 'Verstanden',
 
+    pwaUpdateTitulo: 'Neue Version verfügbar!',
+    pwaUpdateDesc: 'Ein Update ist bereit.',
+    pwaUpdateBtn: 'Jetzt aktualisieren',
+    pwaUpdateActualizando: 'Wird aktualisiert...',
+    buscarActualizacionBtn: 'Nach Updates suchen',
+    comprobandoActualizacion: 'Suche nach Updates...',
+    sinActualizacionesMsg: 'Die App ist auf dem neuesten Stand.',
+
+    filtroAufLager: 'Auf Lager',
+    filtroTodosProductos: 'Alle Produkte',
+
     toastRetiradoExito: '{cantidad} {unidad} von {producto} erfolgreich entnommen.',
     toastAgregadoExito: '{cantidad} {unidad} zu {producto} erfolgreich hinzugefügt.',
     toastAjusteExito: 'Bestand von {producto} auf {cantidad} {unidad} korrigiert.',
@@ -304,7 +328,7 @@ export const translations: Record<LanguageCode, Translations> = {
 
     totalAlimentos: 'Total Alimentos',
     stockBajo: 'Stock Bajo',
-    agotado: 'Agotado',
+    agotado: 'Sin existencias',
     bajoStockBadge: 'Bajo stock',
     buscarPlaceholder: 'Buscar pechuga, pan, carne...',
     sincronizar: 'Sincronizar con Google Sheets',
@@ -424,6 +448,17 @@ export const translations: Record<LanguageCode, Translations> = {
     iosListoDesc: '¡Listo! Podrás abrir Mi Freezer a pantalla completa como una app nativa.',
     entendidoBtn: 'Entendido',
 
+    pwaUpdateTitulo: '¡Nueva versión disponible!',
+    pwaUpdateDesc: 'Hay una actualización lista para instalar.',
+    pwaUpdateBtn: 'Actualizar ahora',
+    pwaUpdateActualizando: 'Actualizando...',
+    buscarActualizacionBtn: 'Buscar actualizaciones',
+    comprobandoActualizacion: 'Buscando actualizaciones...',
+    sinActualizacionesMsg: 'La aplicación ya está actualizada.',
+
+    filtroAufLager: 'Con existencias',
+    filtroTodosProductos: 'Todos los productos',
+
     toastRetiradoExito: '{cantidad} {unidad} retirados con éxito de {producto}.',
     toastAgregadoExito: '{cantidad} {unidad} agregados con éxito a {producto}.',
     toastAjusteExito: 'Saldo de {producto} ajustado a {cantidad} {unidad}.',
@@ -463,6 +498,36 @@ export function translateCategoryName(catName: string | any, lang: LanguageCode)
     return DEFAULT_CATEGORIES[key][lang];
   }
   return str;
+}
+
+/**
+ * Determines if two category strings refer to the same category,
+ * matching exact string, normalized lower-case, or translated equivalents (DE/ES).
+ * Supports default categories (e.g. Panificados <-> Backwaren) and custom categories (e.g. Körner).
+ */
+export function isSameCategory(catA: string | any, catB: string | any): boolean {
+  if (!catA || !catB) return false;
+  const strA = (typeof catA === 'string' ? catA : catA?.nombre || catA?.Categoria || '').trim();
+  const strB = (typeof catB === 'string' ? catB : catB?.nombre || catB?.Categoria || '').trim();
+  if (!strA || !strB) return false;
+
+  const lowA = strA.toLowerCase();
+  const lowB = strB.toLowerCase();
+
+  // Direct case-insensitive match
+  if (lowA === lowB) return true;
+
+  // Match via German visual translation
+  const deA = translateCategoryName(strA, 'de').toLowerCase();
+  const deB = translateCategoryName(strB, 'de').toLowerCase();
+  if (deA === deB) return true;
+
+  // Match via Spanish visual translation
+  const esA = translateCategoryName(strA, 'es').toLowerCase();
+  const esB = translateCategoryName(strB, 'es').toLowerCase();
+  if (esA === esB) return true;
+
+  return false;
 }
 
 /**

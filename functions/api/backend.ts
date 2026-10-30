@@ -13,58 +13,8 @@ export interface Env {
   ASSETS?: { fetch: (req: Request) => Promise<Response> };
 }
 
-/**
- * Executes fetch to Google Apps Script manually handling 302/307 redirects
- * to preserve the HTTP method (POST) and body payload.
- */
-async function fetchGasWithRedirect(
-  targetUrl: string,
-  method: 'GET' | 'POST',
-  bodyData?: Record<string, unknown>
-): Promise<Response> {
-  const headers: Record<string, string> = {
-    Accept: 'application/json, text/plain, */*',
-  };
-
-  const options: RequestInit = {
-    method,
-    headers,
-    redirect: 'manual',
-  };
-
-  if (method === 'POST') {
-    headers['Content-Type'] = 'application/json';
-    options.body = JSON.stringify(bodyData || {});
-  }
-
-  let res = await fetch(targetUrl, options);
-
-  let redirectCount = 0;
-  while ([301, 302, 303, 307, 308].includes(res.status) && redirectCount < 5) {
-    redirectCount++;
-    const location = res.headers.get('location');
-    if (!location) break;
-
-    const nextUrl = new URL(location, targetUrl).toString();
-
-    // Preserve POST method and body when following Apps Script redirects
-    const nextOptions: RequestInit = {
-      method,
-      headers: { ...headers },
-      redirect: 'manual',
-    };
-    if (method === 'POST') {
-      nextOptions.body = JSON.stringify(bodyData || {});
-    }
-
-    res = await fetch(nextUrl, nextOptions);
-  }
-
-  return res;
-}
-
 export async function handleBackendProxy(request: Request, env: Env): Promise<Response> {
-  // Handle CORS preflight
+  // Handle CORS preflight if needed
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -76,9 +26,11 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
     });
   }
 
-  const rawGasUrl = env.GAS_URL || DEFAULT_GAS_URL;
+  const rawGasUrl = env?.GAS_URL || (typeof process !== 'undefined' && process.env?.GAS_URL) || DEFAULT_GAS_URL;
   const gasUrl = rawGasUrl.trim().replace(/["']/g, '');
-  const apiKey = (env.FREEZER_API_KEY || '').trim().replace(/["']/g, '');
+
+  const rawApiKey = env?.FREEZER_API_KEY || (typeof process !== 'undefined' && process.env?.FREEZER_API_KEY) || '';
+  const apiKey = rawApiKey.trim().replace(/["']/g, '');
 
   try {
     const incomingUrl = new URL(request.url);
@@ -89,7 +41,7 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
       targetUrl.searchParams.set(key, val);
     });
 
-    // Inject secret API key if provided
+    // Add secret API key to query params (exact same logic as Netlify)
     if (apiKey) {
       targetUrl.searchParams.set('key', apiKey);
       targetUrl.searchParams.set('apiKey', apiKey);
@@ -98,7 +50,13 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
     let responseFromGas: Response;
 
     if (request.method === 'GET') {
-      responseFromGas = await fetchGasWithRedirect(targetUrl.toString(), 'GET');
+      responseFromGas = await fetch(targetUrl.toString(), {
+        method: 'GET',
+        redirect: 'follow',
+        headers: {
+          Accept: 'application/json, text/plain, */*',
+        },
+      });
     } else if (request.method === 'POST') {
       let bodyData: Record<string, unknown> = {};
       try {
@@ -110,12 +68,21 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
         bodyData = {};
       }
 
+      // Inject API key into payload as well (exact same logic as Netlify)
       if (apiKey) {
         bodyData.key = apiKey;
         bodyData.apiKey = apiKey;
       }
 
-      responseFromGas = await fetchGasWithRedirect(targetUrl.toString(), 'POST', bodyData);
+      responseFromGas = await fetch(targetUrl.toString(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json, text/plain, */*',
+        },
+        body: JSON.stringify(bodyData),
+        redirect: 'follow',
+      });
     } else {
       return new Response(
         JSON.stringify({ ok: false, error: `Método ${request.method} no permitido.` }),

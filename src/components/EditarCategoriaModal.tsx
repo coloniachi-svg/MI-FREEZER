@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Loader2, AlertCircle, CheckCircle2, Edit3 } from 'lucide-react';
 import { Categoria } from '../types/freezer';
 import { EmojiSelector } from './EmojiSelector';
@@ -19,14 +19,23 @@ export const EditarCategoriaModal: React.FC<EditarCategoriaModalProps> = ({
   onClose,
   onGuardar,
 }) => {
-  const { t, translateCategory, isSameCategory } = useLanguage();
+  const { t, isSameCategory } = useLanguage();
 
-  if (!isOpen || !categoria) return null;
-
-  const [nombre, setNombre] = useState(categoria.nombre || '');
-  const [emoji, setEmoji] = useState(categoria.emoji || categoria.Emoji || '');
+  const [nombre, setNombre] = useState('');
+  const [emoji, setEmoji] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && categoria) {
+      setNombre(categoria.nombre || '');
+      setEmoji(categoria.emoji || categoria.Emoji || '');
+      setError(null);
+      setLoading(false);
+    }
+  }, [isOpen, categoria]);
+
+  if (!isOpen || !categoria) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

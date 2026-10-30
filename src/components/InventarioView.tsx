@@ -6,10 +6,12 @@ import {
   AlertTriangle,
   PackageX,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { Categoria, Producto } from '../types/freezer';
 import { getCategoryEmoji, getProductEmoji } from '../utils/formatters';
 import { useLanguage } from '../i18n/LanguageContext';
+import { QuitarProductoModal } from './QuitarProductoModal';
 
 interface InventarioViewProps {
   productos: Producto[];
@@ -20,6 +22,7 @@ interface InventarioViewProps {
   onOpenRetirarModal: (prod: Producto) => void;
   onOpenAgregarModal: (prod: Producto) => void;
   onOpenEditarModal: (prod: Producto) => void;
+  onQuitarProducto: (productoId: string | number) => Promise<void>;
   onRefresh: () => Promise<void>;
   loading: boolean;
 }
@@ -33,13 +36,15 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
   onOpenRetirarModal,
   onOpenAgregarModal,
   onOpenEditarModal,
+  onQuitarProducto,
   onRefresh,
   loading,
 }) => {
-  const { t, formatUnidadLocale, translateCategory, isSameCategory } = useLanguage();
+  const { t, formatUnidadLocale, translateCategory, isSameCategory, lang } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [soloStockBajo, setSoloStockBajo] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [productoAQuitar, setProductoAQuitar] = useState<Producto | null>(null);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -311,20 +316,33 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Quick action buttons [-] and [+] */}
+                {/* Right: Quick action buttons [-] and [+] or [Trash] if out of stock */}
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenRetirarModal(prod);
-                    }}
-                    disabled={prod.Saldo <= 0}
-                    className="w-11 h-11 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 active:scale-95 text-amber-700 border border-amber-200 flex items-center justify-center font-bold transition disabled:opacity-30 disabled:pointer-events-none shadow-xs cursor-pointer"
-                    aria-label={`${t.retirarProducto} ${prod.Producto}`}
-                    title={t.retirarProducto}
-                  >
-                    <Minus className="w-5 h-5 stroke-[2.8]" />
-                  </button>
+                  {prod.Saldo <= 0 ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setProductoAQuitar(prod);
+                      }}
+                      className="w-11 h-11 rounded-xl bg-rose-50 hover:bg-rose-100 active:bg-rose-200 active:scale-95 text-rose-600 border border-rose-200 flex items-center justify-center font-bold transition shadow-xs cursor-pointer"
+                      aria-label={`${t.quitarProductoBtn} ${prod.Producto}`}
+                      title={t.quitarProductoBtn}
+                    >
+                      <Trash2 className="w-5 h-5 stroke-[2.2]" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenRetirarModal(prod);
+                      }}
+                      className="w-11 h-11 rounded-xl bg-amber-50 hover:bg-amber-100 active:bg-amber-200 active:scale-95 text-amber-700 border border-amber-200 flex items-center justify-center font-bold transition disabled:opacity-30 disabled:pointer-events-none shadow-xs cursor-pointer"
+                      aria-label={`${t.retirarProducto} ${prod.Producto}`}
+                      title={t.retirarProducto}
+                    >
+                      <Minus className="w-5 h-5 stroke-[2.8]" />
+                    </button>
+                  )}
 
                   <button
                     onClick={(e) => {
@@ -343,6 +361,17 @@ export const InventarioView: React.FC<InventarioViewProps> = ({
           })}
         </div>
       )}
+
+      {/* Modal de confirmación para quitar producto agotado */}
+      <QuitarProductoModal
+        isOpen={!!productoAQuitar}
+        producto={productoAQuitar}
+        onClose={() => setProductoAQuitar(null)}
+        onConfirm={async (productoId) => {
+          await onQuitarProducto(productoId);
+          setProductoAQuitar(null);
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Loader2,
@@ -22,7 +22,7 @@ interface EditarProductoModalProps {
   onClose: () => void;
   onEditar: (dto: EditarProductoDTO) => Promise<void>;
   onAjustarSaldo: (productoId: string | number, nuevoSaldo: number, observacion: string) => Promise<void>;
-  onArchivar: (productoId: string | number) => Promise<void>;
+  onEliminar: (productoId: string | number) => Promise<void>;
 }
 
 export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
@@ -32,24 +32,38 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
   onClose,
   onEditar,
   onAjustarSaldo,
-  onArchivar,
+  onEliminar,
 }) => {
   const { t, formatUnidadLocale, translateCategory, lang } = useLanguage();
 
-  if (!isOpen || !producto) return null;
-
-  const [nombre, setNombre] = useState(producto.Producto);
-  const [categoria, setCategoria] = useState(producto.Categoria);
-  const [emoji, setEmoji] = useState(producto.Emoji || producto.emoji || '');
-  const [minimoStr, setMinimoStr] = useState(producto.Minimo.toString().replace('.', ','));
-  const [nuevoSaldoStr, setNuevoSaldoStr] = useState(
-    producto.Saldo.toString().replace('.', ',')
-  );
+  const [nombre, setNombre] = useState('');
+  const [categoria, setCategoria] = useState('');
+  const [emoji, setEmoji] = useState('');
+  const [minimoStr, setMinimoStr] = useState('1');
+  const [nuevoSaldoStr, setNuevoSaldoStr] = useState('0');
   const [ajusteObs, setAjusteObs] = useState('');
 
   const [activeTab, setActiveTab] = useState<'info' | 'ajuste' | 'archivar'>('info');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && producto) {
+      setNombre(producto.Producto || '');
+      setCategoria(producto.Categoria || '');
+      setEmoji(producto.Emoji || producto.emoji || '');
+      setMinimoStr(producto.Minimo !== undefined ? producto.Minimo.toString().replace('.', ',') : '1');
+      setNuevoSaldoStr(producto.Saldo !== undefined ? producto.Saldo.toString().replace('.', ',') : '0');
+      setAjusteObs('');
+      setActiveTab('info');
+      setError(null);
+      setLoading(false);
+    }
+  }, [isOpen, producto]);
+
+  if (!isOpen || !producto) return null;
+
+  const esSaldoMayorACero = producto.Saldo > 0;
 
   // Handle edit basic info
   const handleGuardarDatos = async (e: React.FormEvent) => {
@@ -108,15 +122,20 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
     }
   };
 
-  // Handle archive
-  const handleConfirmarArchivar = async () => {
+  // Handle definitive deletion
+  const handleConfirmarEliminar = async () => {
+    if (esSaldoMayorACero) {
+      setError(t.errorSaldoMayorACero);
+      return;
+    }
+
     setError(null);
     try {
       setLoading(true);
-      await onArchivar(producto.ID);
+      await onEliminar(producto.ID);
       onClose();
     } catch (err: any) {
-      setError(err?.message || 'Error al archivar el producto.');
+      setError(err?.message || 'Error al eliminar el producto.');
     } finally {
       setLoading(false);
     }
@@ -364,22 +383,27 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
           </form>
         )}
 
-        {/* Tab 3: Eliminar / Archivar */}
+        {/* Tab 3: Eliminar definitivamente */}
         {activeTab === 'archivar' && (
           <div className="mt-4 space-y-4">
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
                 <p className="font-bold">
-                  {lang === 'de' ? 'Möchtest du das Produkt entfernen?' : '¿Deseas eliminar el producto del inventario?'}
+                  {t.eliminarProductoTitulo}
                 </p>
                 <p className="text-rose-700 leading-relaxed">
-                  {lang === 'de'
-                    ? 'Das Produkt wird aus der aktiven Liste des Gefrierschranks und den Suchen entfernt. Der Buchungsverlauf in Google Sheets bleibt erhalten und du kannst das Produkt später jederzeit neu registrieren.'
-                    : 'El producto se retirará de tu inventario activo y de las búsquedas. Su historial de entradas y salidas se conservará intacto en Google Sheets y podrás volver a registrarlo si lo deseas.'}
+                  {t.eliminarProductoDesc.replace('{producto}', producto.Producto)}
                 </p>
               </div>
             </div>
+
+            {esSaldoMayorACero && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{t.errorSaldoMayorACero}</span>
+              </div>
+            )}
 
             <div className="pt-2 flex items-center gap-2">
               <button
@@ -392,19 +416,19 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
               </button>
               <button
                 type="button"
-                onClick={handleConfirmarArchivar}
-                disabled={loading}
+                onClick={handleConfirmarEliminar}
+                disabled={loading || esSaldoMayorACero}
                 className="w-1/2 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm transition shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>{t.archivando}</span>
+                    <span>{t.eliminando}</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="w-4 h-4" />
-                    <span>{lang === 'de' ? 'Produkt entfernen' : 'Eliminar producto'}</span>
+                    <span>{t.eliminarProductoBtn}</span>
                   </>
                 )}
               </button>

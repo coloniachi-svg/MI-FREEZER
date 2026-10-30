@@ -155,13 +155,25 @@ export interface Translations {
   filtroAufLager: string;
   filtroTodosProductos: string;
 
+  // Definitive deletion
+  eliminarProductoTitulo: string;
+  eliminarProductoDesc: string;
+  eliminarProductoBtn: string;
+  eliminando: string;
+  errorSaldoMayorACero: string;
+
+  // Quitar / Eliminar aliases
+  quitarProductoTitulo: string;
+  quitarProductoDesc: string;
+  quitarProductoBtn: string;
+
   // Toast templates
   toastRetiradoExito: string;
   toastAgregadoExito: string;
   toastAjusteExito: string;
   toastProductoCreadoExito: string;
   toastProductoEditadoExito: string;
-  toastProductoArchivadoExito: string;
+  toastProductoEliminadoExito: string;
   toastCategoriaCreadaExito: string;
 }
 
@@ -308,12 +320,22 @@ export const translations: Record<LanguageCode, Translations> = {
     filtroAufLager: 'Auf Lager',
     filtroTodosProductos: 'Alle Produkte',
 
+    eliminarProductoTitulo: 'Produkt dauerhaft löschen?',
+    eliminarProductoDesc: 'Möchtest du "{producto}" dauerhaft aus Google Sheets löschen? Das Produkt und alle zugehörigen Buchungen werden endgültig entfernt.',
+    eliminarProductoBtn: 'Dauerhaft löschen',
+    eliminando: 'Wird gelöscht...',
+    errorSaldoMayorACero: 'Produkte mit Lagerbestand über 0 können nicht gelöscht werden.',
+
+    quitarProductoTitulo: 'Produkt dauerhaft löschen?',
+    quitarProductoDesc: 'Möchtest du "{producto}" dauerhaft aus Google Sheets löschen? Das Produkt und alle zugehörigen Buchungen werden endgültig entfernt.',
+    quitarProductoBtn: 'Dauerhaft löschen',
+
     toastRetiradoExito: '{cantidad} {unidad} von {producto} erfolgreich entnommen.',
     toastAgregadoExito: '{cantidad} {unidad} zu {producto} erfolgreich hinzugefügt.',
     toastAjusteExito: 'Bestand von {producto} auf {cantidad} {unidad} korrigiert.',
     toastProductoCreadoExito: '"{producto}" in Google Sheets gespeichert.',
     toastProductoEditadoExito: 'Änderungen an "{producto}" gespeichert.',
-    toastProductoArchivadoExito: 'Produkt erfolgreich archiviert.',
+    toastProductoEliminadoExito: '"{producto}" und seine Buchungen wurden dauerhaft gelöscht.',
     toastCategoriaCreadaExito: 'Kategorie "{categoria}" erfolgreich hinzugefügt.',
   },
 
@@ -459,12 +481,22 @@ export const translations: Record<LanguageCode, Translations> = {
     filtroAufLager: 'Con existencias',
     filtroTodosProductos: 'Todos los productos',
 
+    eliminarProductoTitulo: '¿Eliminar producto definitivamente?',
+    eliminarProductoDesc: '¿Deseas eliminar "{producto}" de forma definitiva? Se borrarán el producto y todos sus movimientos asociados de Google Sheets.',
+    eliminarProductoBtn: 'Eliminar definitivamente',
+    eliminando: 'Eliminando...',
+    errorSaldoMayorACero: 'No se pueden eliminar productos que tengan existencias mayores a cero.',
+
+    quitarProductoTitulo: '¿Eliminar producto definitivamente?',
+    quitarProductoDesc: '¿Deseas eliminar "{producto}" de forma definitiva? Se borrarán el producto y todos sus movimientos asociados de Google Sheets.',
+    quitarProductoBtn: 'Eliminar definitivamente',
+
     toastRetiradoExito: '{cantidad} {unidad} retirados con éxito de {producto}.',
     toastAgregadoExito: '{cantidad} {unidad} agregados con éxito a {producto}.',
     toastAjusteExito: 'Saldo de {producto} ajustado a {cantidad} {unidad}.',
     toastProductoCreadoExito: '"{producto}" guardado en Google Sheets.',
     toastProductoEditadoExito: 'Cambios de "{producto}" guardados.',
-    toastProductoArchivadoExito: 'Producto archivado correctamente.',
+    toastProductoEliminadoExito: '"{producto}" y sus movimientos fueron eliminados definitivamente.',
     toastCategoriaCreadaExito: 'Categoría "{categoria}" agregada.',
   },
 };

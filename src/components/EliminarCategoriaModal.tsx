@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trash2, AlertTriangle, Loader2, ArrowRightLeft, X } from 'lucide-react';
 import { Categoria, Producto } from '../types/freezer';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -22,9 +22,11 @@ export const EliminarCategoriaModal: React.FC<EliminarCategoriaModalProps> = ({
 }) => {
   const { t, translateCategory, isSameCategory } = useLanguage();
 
-  if (!isOpen || !categoria) return null;
+  const [targetCategoria, setTargetCategoria] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const catNombre = categoria.nombre || '';
+  const catNombre = categoria?.nombre || '';
   const catVisual = translateCategory(catNombre);
 
   // Active non-archived products in this category (both stock > 0 and stock === 0)
@@ -35,14 +37,21 @@ export const EliminarCategoriaModal: React.FC<EliminarCategoriaModalProps> = ({
 
   // Other categories available to reassign products
   const otrasCategorias = categoriasExistentes.filter(
-    (c) => c.id !== categoria.id && !isSameCategory(c.nombre, catNombre)
+    (c) => c.id !== categoria?.id && !isSameCategory(c.nombre, catNombre)
   );
 
-  const [targetCategoria, setTargetCategoria] = useState<string>(
-    otrasCategorias.length > 0 ? otrasCategorias[0].nombre : ''
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (isOpen && categoria) {
+      const availableOther = categoriasExistentes.filter(
+        (c) => c.id !== categoria.id && !isSameCategory(c.nombre, categoria.nombre)
+      );
+      setTargetCategoria(availableOther.length > 0 ? availableOther[0].nombre : '');
+      setError(null);
+      setLoading(false);
+    }
+  }, [isOpen, categoria, categoriasExistentes]);
+
+  if (!isOpen || !categoria) return null;
 
   const handleEliminar = async () => {
     setError(null);

@@ -22,12 +22,12 @@ import {
   Producto,
 } from './types/freezer';
 import {
-  archivarProducto,
   crearCategoria,
   crearProducto,
   editarCategoria,
   editarProducto,
   eliminarCategoria,
+  eliminarProductoDefinitivo,
   getDatosIniciales,
   guardarConfiguracion,
   registrarMovimiento,
@@ -319,13 +319,36 @@ function MainFreezerApp() {
     }
   };
 
-  // Handle Archivar / Eliminar Producto
-  const handleArchivarProducto = async (productoId: string | number) => {
+  // Handle Eliminar Producto Definitivamente (cuando Saldo === 0)
+  const handleEliminarProductoDefinitivo = async (productoId: string | number) => {
+    const targetProd = productos.find((p) => p.ID === productoId);
+    if (!targetProd) return;
+
+    if (targetProd.Saldo > 0) {
+      showToast(t.errorSaldoMayorACero, 'error');
+      throw new Error(t.errorSaldoMayorACero);
+    }
+
     setActionLoading(true);
     try {
-      await archivarProducto(productoId);
+      await eliminarProductoDefinitivo(productoId);
+
+      // Remove product permanently from local inventory state
       setProductos((prev) => prev.filter((p) => p.ID !== productoId));
-      showToast(t.toastProductoArchivadoExito, 'info');
+
+      // Remove associated movements permanently from local movements state
+      setMovimientos((prev) =>
+        prev.filter(
+          (m) =>
+            String(m.ProductoID) !== String(productoId) &&
+            m.Producto !== targetProd.Producto
+        )
+      );
+
+      showToast(
+        t.toastProductoEliminadoExito.replace('{producto}', targetProd.Producto),
+        'info'
+      );
     } catch (err: any) {
       throw err;
     } finally {
@@ -553,6 +576,7 @@ function MainFreezerApp() {
                   setMovimientoModalState({ isOpen: true, producto: prod, tipo: 'ENTRADA' })
                 }
                 onOpenEditarModal={(prod) => setEditarModalProducto(prod)}
+                onQuitarProducto={handleEliminarProductoDefinitivo}
                 onRefresh={() => cargarDatos(true)}
                 loading={actionLoading}
               />
@@ -669,7 +693,7 @@ function MainFreezerApp() {
         onClose={() => setEditarModalProducto(null)}
         onEditar={handleEditarProducto}
         onAjustarSaldo={handleAjusteSaldo}
-        onArchivar={handleArchivarProducto}
+        onEliminar={handleEliminarProductoDefinitivo}
       />
 
       {/* Floating Toast Notifications */}

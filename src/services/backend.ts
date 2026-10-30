@@ -212,10 +212,11 @@ export async function getDatosIniciales(): Promise<DatosIniciales> {
   const rawMovimientos = res.movimientos || (res.resultado as any)?.movimientos || [];
   const rawConfig = res.configuracion || (res.resultado as any)?.configuracion || [];
 
+  const allParsedProductos = rawProductos.map(normalizeProducto);
+
   return {
-    productos: rawProductos
-      .map(normalizeProducto)
-      .filter((p: Producto) => p.Estado !== 'ARCHIVADO'),
+    // Exclude any legacy archived rows from active inventory without deleting them automatically
+    productos: allParsedProductos.filter((p: Producto) => p.Estado !== 'ARCHIVADO'),
     categorias: rawCategorias
       .map(normalizeCategoria)
       .filter((c: Categoria) => c.nombre && c.nombre !== '[object Object]'),
@@ -310,16 +311,35 @@ export async function registrarMovimiento(dto: RegistrarMovimientoDTO): Promise<
 }
 
 /**
- * Archivar un producto en Google Sheets (cambio de estado a 'ARCHIVADO')
+ * Eliminar un producto sin stock y sus movimientos permanentemente de Google Sheets
  */
-export async function archivarProducto(id: string | number): Promise<BackendResponse> {
+export async function eliminarProductoDefinitivo(id: string | number): Promise<BackendResponse> {
   const idStr = String(id);
   const res = await requestApi<any>('POST', undefined, {
-    action: 'archivarProducto',
+    action: 'eliminarProducto',
     id: idStr,
     productoId: idStr,
   });
   return res;
+}
+
+/**
+ * Alias para compatibilidad con llamadas anteriores
+ */
+export const archivarProducto = eliminarProductoDefinitivo;
+
+/**
+ * Limpiar filas de productos que quedaron en estado 'ARCHIVADO' de pruebas anteriores
+ */
+export async function limpiarArchivadosAnteriores(): Promise<BackendResponse> {
+  try {
+    const res = await requestApi<any>('POST', undefined, {
+      action: 'limpiarArchivados',
+    });
+    return res;
+  } catch (err) {
+    return { ok: false, error: 'No se pudo limpiar los productos archivados' };
+  }
 }
 
 /**

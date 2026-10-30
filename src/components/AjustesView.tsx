@@ -189,7 +189,7 @@ export const AjustesView: React.FC<AjustesViewProps> = ({
           <button
             onClick={handleManualSync}
             disabled={refreshing}
-            className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 font-semibold text-xs flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50"
+            className="px-3.5 py-2 rounded-xl bg-sky-50 hover:bg-sky-100 border border-sky-200 text-sky-700 font-semibold text-xs flex items-center gap-1.5 transition active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             <span>{t.sincronizarBtn}</span>

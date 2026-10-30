@@ -1,7 +1,7 @@
 /**
  * Cloudflare Pages Function & Cloudflare Worker Handler for /api/backend
  * Secure server-side proxy between frontend and Google Apps Script Web App.
- * Injects FREEZER_API_KEY on the server side without exposing it to the client.
+ * Injects FREEZER_API_KEY on the server side without exposing secrets.
  */
 
 const DEFAULT_GAS_URL =
@@ -11,6 +11,56 @@ export interface Env {
   GAS_URL?: string;
   FREEZER_API_KEY?: string;
   ASSETS?: { fetch: (req: Request) => Promise<Response> };
+}
+
+/**
+ * Executes fetch to Google Apps Script manually handling 302/307 redirects
+ * to preserve the HTTP method (POST) and body payload.
+ */
+async function fetchGasWithRedirect(
+  targetUrl: string,
+  method: 'GET' | 'POST',
+  bodyData?: Record<string, unknown>
+): Promise<Response> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json, text/plain, */*',
+  };
+
+  const options: RequestInit = {
+    method,
+    headers,
+    redirect: 'manual',
+  };
+
+  if (method === 'POST') {
+    headers['Content-Type'] = 'application/json';
+    options.body = JSON.stringify(bodyData || {});
+  }
+
+  let res = await fetch(targetUrl, options);
+
+  let redirectCount = 0;
+  while ([301, 302, 303, 307, 308].includes(res.status) && redirectCount < 5) {
+    redirectCount++;
+    const location = res.headers.get('location');
+    if (!location) break;
+
+    const nextUrl = new URL(location, targetUrl).toString();
+
+    // Preserve POST method and body when following Apps Script redirects
+    const nextOptions: RequestInit = {
+      method,
+      headers: { ...headers },
+      redirect: 'manual',
+    };
+    if (method === 'POST') {
+      nextOptions.body = JSON.stringify(bodyData || {});
+    }
+
+    res = await fetch(nextUrl, nextOptions);
+  }
+
+  return res;
 }
 
 export async function handleBackendProxy(request: Request, env: Env): Promise<Response> {
@@ -26,8 +76,9 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
     });
   }
 
-  const gasUrl = env.GAS_URL || DEFAULT_GAS_URL;
-  const apiKey = env.FREEZER_API_KEY || '';
+  const rawGasUrl = env.GAS_URL || DEFAULT_GAS_URL;
+  const gasUrl = rawGasUrl.trim().replace(/["']/g, '');
+  const apiKey = (env.FREEZER_API_KEY || '').trim().replace(/["']/g, '');
 
   try {
     const incomingUrl = new URL(request.url);
@@ -38,7 +89,7 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
       targetUrl.searchParams.set(key, val);
     });
 
-    // Add secret API key to query params if available
+    // Inject secret API key if provided
     if (apiKey) {
       targetUrl.searchParams.set('key', apiKey);
       targetUrl.searchParams.set('apiKey', apiKey);
@@ -47,13 +98,7 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
     let responseFromGas: Response;
 
     if (request.method === 'GET') {
-      responseFromGas = await fetch(targetUrl.toString(), {
-        method: 'GET',
-        redirect: 'follow',
-        headers: {
-          Accept: 'application/json, text/plain, */*',
-        },
-      });
+      responseFromGas = await fetchGasWithRedirect(targetUrl.toString(), 'GET');
     } else if (request.method === 'POST') {
       let bodyData: Record<string, unknown> = {};
       try {
@@ -65,27 +110,21 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
         bodyData = {};
       }
 
-      // Inject API key into payload if available
       if (apiKey) {
         bodyData.key = apiKey;
         bodyData.apiKey = apiKey;
       }
 
-      responseFromGas = await fetch(targetUrl.toString(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json, text/plain, */*',
-        },
-        body: JSON.stringify(bodyData),
-        redirect: 'follow',
-      });
+      responseFromGas = await fetchGasWithRedirect(targetUrl.toString(), 'POST', bodyData);
     } else {
       return new Response(
         JSON.stringify({ ok: false, error: `Método ${request.method} no permitido.` }),
         {
           status: 405,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
         }
       );
     }
@@ -98,7 +137,7 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
       parsedData = {
         ok: false,
         error: `Respuesta no válida del servidor: ${responseText.slice(0, 300)}`,
-        raw: responseText,
+        raw: responseText.slice(0, 300),
       };
     }
 
@@ -119,7 +158,10 @@ export async function handleBackendProxy(request: Request, env: Env): Promise<Re
       }),
       {
         status: 502,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
       }
     );
   }
@@ -134,12 +176,24 @@ export async function onRequest(context: { request: Request; env: Env }): Promis
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === '/api/backend' || url.pathname.startsWith('/api/backend')) {
+    const pathname = url.pathname.replace(/\/+$/, '') || '/';
+
+    // Handle API requests to /api/backend
+    if (pathname === '/api/backend' || pathname.startsWith('/api/backend/')) {
       return handleBackendProxy(request, env);
     }
+
+    // Serve static assets / SPA fallback via ASSETS binding
     if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      const assetRes = await env.ASSETS.fetch(request);
+      if (assetRes.status !== 404) {
+        return assetRes;
+      }
+      // SPA Fallback for client-side navigation (e.g., /inventario -> /index.html)
+      const indexReq = new Request(new URL('/index.html', request.url), request);
+      return env.ASSETS.fetch(indexReq);
     }
+
     return new Response('Not found', { status: 404 });
   },
 };

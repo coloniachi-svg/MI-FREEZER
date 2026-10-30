@@ -236,8 +236,8 @@ export const EditarProductoModal: React.FC<EditarProductoModalProps> = ({
             <EmojiSelector
               value={emoji}
               onChange={setEmoji}
-              defaultEmojiSuggestion="Auto 🥩/🥖/🥦"
-              label="Emoji personalizado"
+              defaultSymbol="📦"
+              label={lang === 'de' ? 'Produkt-Emoji (Optional)' : 'Emoji del producto (Opcional)'}
             />
 
             <div>

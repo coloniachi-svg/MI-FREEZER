@@ -180,8 +180,8 @@ export const NuevoProductoModal: React.FC<NuevoProductoModalProps> = ({
           <EmojiSelector
             value={emoji}
             onChange={setEmoji}
-            defaultEmojiSuggestion="Auto 🥩/🥖/🥦"
-            label="Emoji del producto (Opcional)"
+            defaultSymbol="📦"
+            label={lang === 'de' ? 'Produkt-Emoji (Optional)' : 'Emoji del producto (Opcional)'}
           />
 
           {/* Categoría */}

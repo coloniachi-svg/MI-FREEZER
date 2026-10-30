@@ -179,7 +179,7 @@ export interface Translations {
 
 export const translations: Record<LanguageCode, Translations> = {
   de: {
-    appName: 'Mein Gefrierschrank',
+    appName: "Elda's Freezer",
     appSubtitle: 'Bestandsverwaltung',
 
     navInventario: 'Inventar',
@@ -282,7 +282,7 @@ export const translations: Record<LanguageCode, Translations> = {
     categoriaCreadaExito: 'Kategorie erfolgreich erstellt.',
 
     ajustesTitulo: 'Einstellungen',
-    ajustesSubtitulo: 'Persönliche Konfiguration von Mein Gefrierschrank',
+    ajustesSubtitulo: "Persönliche Konfiguration von Elda's Freezer",
     idiomaSeccionTitulo: 'Sprache / Idioma',
     idiomaSeccionDesc: 'Wähle die Anzeigesprache der App',
     pwaSeccionTitulo: 'PWA-Anwendung',
@@ -306,7 +306,7 @@ export const translations: Record<LanguageCode, Translations> = {
     paso1IosDesc: 'In der Safari-Symbolleiste unten.',
     paso2IosTitulo: '2. Wähle "Zum Home-Bildschirm"',
     paso2IosDesc: 'Scrolle in den Optionen nach unten.',
-    iosListoDesc: 'Fertig! Du kannst Mein Gefrierschrank wie eine native App im Vollbildmodus nutzen.',
+    iosListoDesc: "Fertig! Du kannst Elda's Freezer wie eine native App im Vollbildmodus nutzen.",
     entendidoBtn: 'Verstanden',
 
     pwaUpdateTitulo: 'Neue Version verfügbar!',
@@ -340,7 +340,7 @@ export const translations: Record<LanguageCode, Translations> = {
   },
 
   es: {
-    appName: 'Mi Freezer',
+    appName: "Elda's Freezer",
     appSubtitle: 'Control de Inventario',
 
     navInventario: 'Inventario',
@@ -443,7 +443,7 @@ export const translations: Record<LanguageCode, Translations> = {
     categoriaCreadaExito: 'Categoría creada correctamente.',
 
     ajustesTitulo: 'Ajustes',
-    ajustesSubtitulo: 'Configuración personal de Mi Freezer',
+    ajustesSubtitulo: "Configuración personal de Elda's Freezer",
     idiomaSeccionTitulo: 'Idioma / Sprache',
     idiomaSeccionDesc: 'Selecciona el idioma de la aplicación',
     pwaSeccionTitulo: 'Aplicación PWA',
@@ -457,7 +457,7 @@ export const translations: Record<LanguageCode, Translations> = {
     offlineAviso: 'Sin conexión a internet — No se pueden guardar cambios hasta reconectar.',
     errorConexionTitulo: 'No pudimos conectar con el servidor',
     reintentarConexion: 'Reintentar conexión',
-    cargandoTitulo: 'Cargando Mi Freezer...',
+    cargandoTitulo: "Cargando Elda's Freezer...",
     cargandoSubtitulo: 'Sincronizando productos y movimientos con Google Sheets',
 
     instalarApp: 'Instalar App',
@@ -467,7 +467,7 @@ export const translations: Record<LanguageCode, Translations> = {
     paso1IosDesc: 'En la barra inferior de Safari.',
     paso2IosTitulo: '2. Elige "Agregar a Inicio"',
     paso2IosDesc: 'Desplaza hacia abajo en las opciones.',
-    iosListoDesc: '¡Listo! Podrás abrir Mi Freezer a pantalla completa como una app nativa.',
+    iosListoDesc: "¡Listo! Podrás abrir Elda's Freezer a pantalla completa como una app nativa.",
     entendidoBtn: 'Entendido',
 
     pwaUpdateTitulo: '¡Nueva versión disponible!',

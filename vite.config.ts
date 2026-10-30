@@ -14,8 +14,8 @@ export default defineConfig(() => {
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],
         manifest: {
           id: '/',
-          name: 'Mein Gefrierschrank / Mi Freezer',
-          short_name: 'Freezer',
+          name: "Elda's Freezer",
+          short_name: "Elda's Freezer",
           description: 'Control de inventario inteligente y rápido para tu freezer con Google Sheets.',
           theme_color: '#0284c7',
           background_color: '#ffffff',
